@@ -212,6 +212,23 @@
   // UTILS
   function norm(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 
+  function familiaFromNombre(nombre) {
+    const n = norm(nombre);
+    if (/alpargata|zapatilla|zapato|zueco|borcegu|mocasin|botin|\bbota[s]?\b|calzado/.test(n)) return 'Calzado';
+    if (/campera|buzo|cazador|rompeviento|parka|chaleco|\bsaco\b|polar|sweater|pulover|pullover/.test(n)) return 'Abrigo';
+    if (/pantalon|bombacha|jean|bermuda|\bshort[s]?\b|\bcalza\b/.test(n)) return 'Pantalones';
+    if (/remera|chomba|camiseta|musculosa/.test(n)) return 'Remeras y Chombas';
+    if (/camisa/.test(n)) return 'Camisas';
+    if (/gorro|gorra|cinto|\bmedia[s]?\b|guante|mochila|billetera|pañuelo|panuelo|bufanda/.test(n)) return 'Accesorios';
+    return 'Otros';
+  }
+
+  const PROVEEDORES_INDUSTRIALES = ['macata','deneb','ranquel','tkw','guadal','pampenorte','intensivo','sin marca','promocional','safety','zonda'];
+  function segmentoFromProveedor(nombreProv) {
+    const n = norm(nombreProv);
+    return PROVEEDORES_INDUSTRIALES.some(k => n.includes(k)) ? 'Industria' : 'Urbano';
+  }
+
   const CATALOG_UPPER = Object.fromEntries(Object.entries(CATALOG).map(([k,v]) => [k.toUpperCase(), v]));
   function getCatalog(codigo) {
     if (!codigo) return null;
@@ -877,6 +894,24 @@
     const vendedorLabels  = vendedorEntries.map(([k])=>k);
     const vendedorVals    = vendedorEntries.map(([,v])=>Math.round(v.total));
 
+    const familiaTotals = {};
+    Object.values(byProd).forEach(p => {
+      if (!p.total) return;
+      const fam = familiaFromNombre(p.key || p.desc);
+      familiaTotals[fam] = (familiaTotals[fam] || 0) + p.total;
+    });
+    const familiaEntries = Object.entries(familiaTotals).sort((a,b)=>b[1]-a[1]);
+    const familiaLabels  = familiaEntries.map(([k])=>k);
+    const familiaVals    = familiaEntries.map(([,v])=>Math.round(v));
+
+    const segmentoTotals = { Industria: 0, Urbano: 0 };
+    Object.entries(byProv).forEach(([prov,v]) => {
+      if (!v.total || v.total <= 0) return;
+      segmentoTotals[segmentoFromProveedor(prov)] += v.total;
+    });
+    const segmentoLabels = Object.keys(segmentoTotals).filter(k => segmentoTotals[k] > 0);
+    const segmentoVals   = segmentoLabels.map(k => Math.round(segmentoTotals[k]));
+
     const DONUT_COLORS = ['#1e3a8a','#7c3aed','#0369a1','#059669','#d97706','#dc2626','#db2777','#0891b2','#65a30d','#ea580c','#6d28d9','#0f766e','#92400e','#1f2937'];
 
     let artDetailHTML = '';
@@ -1111,6 +1146,23 @@
         </div>` : ''}
       </div>
 
+      <div class="v-charts-row-2big">
+        ${familiaLabels.length ? `<div class="panel">
+          <div class="panel-header" style="padding:.75rem 1rem">
+            <span class="panel-title" style="font-size:.82rem">FACTURACIÓN POR FAMILIA DE PRODUCTO</span>
+            <span class="badge">${familiaLabels.length} familias</span>
+          </div>
+          <div style="padding:.75rem 1rem 1rem;height:290px"><canvas id="chartFamilia"></canvas></div>
+        </div>` : ''}
+        ${segmentoLabels.length ? `<div class="panel">
+          <div class="panel-header" style="padding:.75rem 1rem">
+            <span class="panel-title" style="font-size:.82rem">INDUSTRIA VS. URBANO</span>
+            <span class="badge">por proveedor</span>
+          </div>
+          <div style="padding:.75rem 1rem 1rem;height:290px"><canvas id="chartSegmento"></canvas></div>
+        </div>` : ''}
+      </div>
+
       <div class="panel">
         <div class="panel-header">
           <span class="panel-title">Facturas Mayoristas</span>
@@ -1258,6 +1310,9 @@
     _vCharts.lista  = makeDonut('chartLista',  listaLabels,  listaVals,   lbl => { if(vListaFilter.has(lbl))vListaFilter.delete(lbl);else vListaFilter.add(lbl); renderVentas(); }, true);
     _vCharts.origen = makeDonut('chartOrigen', origenLabels, origenVals,  lbl => { if(vOrigenFilter.has(lbl))vOrigenFilter.delete(lbl);else vOrigenFilter.add(lbl); renderVentas(); }, true);
     _vCharts.vendedor = makeDonut('chartVendedor', vendedorLabels, vendedorVals, lbl => { if(vVendedores.has(lbl))vVendedores.delete(lbl);else vVendedores.add(lbl); renderVentas(); }, true);
+    _vCharts.familia = makeDonut('chartFamilia', familiaLabels, familiaVals, null, true);
+    _vCharts.segmento = makeDonut('chartSegmento', segmentoLabels, segmentoVals, null, true,
+      segmentoLabels.map(l => l === 'Industria' ? '#1e3a8a' : '#d97706'));
 
     const ctxTalle = document.getElementById('chartTalle');
     if (ctxTalle && talleLabels.length) {
