@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='54' font-size='56'%3E📈%3C/text%3E%3C/svg%3E">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📈 Ventas · Pampero</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f0eeeb;
+      --surface: #ffffff;
+      --surface2: #f5f4f1;
+      --border: #e2dfd9;
+      --accent: #2563eb;
+      --accent2: #d97706;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --purple: #7c3aed;
+      --text: #1a1a1a;
+      --muted: #6b7280;
+      --green: #16a34a;
+      --yellow: #d97706;
+      --red: #dc2626;
+      --mono: 'DM Mono', monospace;
+      --display: 'Syne', sans-serif;
+      --body: 'DM Sans', sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; }
+
+    #setup { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem; }
+    .setup-card { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 3rem; max-width: 500px; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+    .setup-card h1 { font-family: var(--display); font-size: 1.8rem; font-weight: 800; margin-bottom: .5rem; background: linear-gradient(135deg, #d97706, #2563eb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .setup-card > p { color: var(--muted); font-size: .88rem; margin-bottom: 2rem; line-height: 1.6; }
+    .setup-section { font-family: var(--mono); font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 1.5rem 0 .75rem; border-bottom: 1px solid var(--border); padding-bottom: .4rem; }
+    label { display: block; font-size: .72rem; font-family: var(--mono); color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: .5rem; }
+    input[type="text"], input[type="password"] { width: 100%; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: .65rem 1rem; font-family: var(--mono); font-size: .88rem; color: var(--text); margin-bottom: 1.25rem; transition: border-color .15s; outline: none; }
+    input[type="text"]:focus, input[type="password"]:focus { border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(217,119,6,.12); }
+    .btn { background: var(--accent2); color: #fff; border: none; border-radius: 10px; padding: .8rem 2rem; font-family: var(--display); font-size: .9rem; font-weight: 700; cursor: pointer; width: 100%; margin-top: .5rem; transition: background .15s; }
+    .btn:hover { background: #b45309; }
+    .error-msg { color: var(--danger); font-size: .82rem; margin-top: .75rem; display: none; }
+
+    #dashboard { display: none; flex-direction: column; min-height: 100vh; }
+    header { background: #fff; border-bottom: 1px solid var(--border); padding: .8rem 1.5rem; display: flex; align-items: center; gap: 1rem; position: sticky; top: 0; z-index: 100; }
+    .header-left h1 { font-family: var(--display); font-size: 1rem; font-weight: 800; }
+    .header-left span { font-size: .72rem; color: var(--muted); font-family: var(--mono); }
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: .6rem; }
+    .last-update { font-family: var(--mono); font-size: .68rem; color: var(--muted); }
+    .btn-sm { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: .4rem .9rem; font-size: .78rem; font-family: var(--mono); cursor: pointer; color: var(--text); transition: background .12s; white-space: nowrap; }
+    .btn-sm:hover { background: var(--border); }
+    .btn-sm.danger { color: var(--danger); }
+
+    main { flex: 1; padding: 1.5rem; max-width: 1400px; width: 100%; margin: 0 auto; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .75rem; margin-bottom: 1.5rem; }
+    .kpi { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; border-left: 3px solid var(--kpi-color, var(--accent)); }
+    .kpi-label { font-size: .68rem; font-family: var(--mono); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: .3rem; }
+    .kpi-value { font-family: var(--display); font-size: 2rem; font-weight: 800; color: var(--kpi-color, var(--accent)); line-height: 1; }
+    .kpi-sub { font-size: .72rem; color: var(--muted); margin-top: .25rem; }
+
+    .panel { background: #fff; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 1.25rem; overflow: hidden; }
+    .panel-header { display: flex; align-items: center; justify-content: space-between; padding: .9rem 1.25rem; border-bottom: 1px solid var(--border); gap: .75rem; flex-wrap: wrap; }
+    .panel-title { font-family: var(--display); font-size: .9rem; font-weight: 700; }
+    .badge { font-family: var(--mono); font-size: .7rem; border-radius: 6px; padding: 2px 8px; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
+    .badge.success { background: #dcfce7; border-color: #bbf7d0; color: #15803d; }
+    .badge.warning { background: #fef3c7; border-color: #fde68a; color: #b45309; }
+
+    .filter-bar { display: flex; align-items: center; gap: .75rem; padding: .75rem 1.25rem; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .filter-label { font-family: var(--mono); font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+    .filter-bar input[type="text"], .filter-bar input[type="date"] { margin-bottom: 0; max-width: 200px; font-size: .82rem; padding: .38rem .8rem; border-radius: 8px; }
+    .filter-bar select { font-family: var(--mono); font-size: .82rem; border: 1.5px solid var(--border); border-radius: 8px; padding: .38rem .7rem; background: #fff; color: var(--text); max-width: 200px; outline: none; cursor: pointer; }
+    .filter-bar select:focus { border-color: var(--accent2); }
+    .btn-clear { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: .38rem .85rem; color: var(--muted); font-size: .78rem; cursor: pointer; white-space: nowrap; }
+    .btn-clear:hover { background: var(--surface2); }
+    .sf-dd-item { padding: .42rem .9rem; cursor: pointer; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+    .sf-dd-item:last-child { border-bottom: none; }
+    .sf-dd-item:hover { background: var(--surface2); }
+    .sf-dd-item.sf-dd-selected { background: #eff6ff; }
+    .sf-dd-check { width: 1rem; text-align: center; font-size: .8rem; color: var(--accent2); font-weight: 700; flex-shrink: 0; }
+    .sf-chip { display: inline-flex; align-items: center; gap: .3rem; background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 20px; padding: .22rem .55rem .22rem .75rem; font-family: var(--mono); font-size: .75rem; color: #1d4ed8; max-width: 100%; }
+    .sf-chip-remove { background: none; border: none; cursor: pointer; color: #93c5fd; font-size: .8rem; line-height: 1; padding: 0 .1rem; display: flex; align-items: center; }
+    .sf-chip-remove:hover { color: #1d4ed8; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    th { font-family: var(--mono); font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); padding: .6rem 1rem; text-align: left; background: var(--surface2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: .6rem 1rem; border-bottom: 1px solid var(--surface2); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafaf9; }
+
+    .abc-a { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; font-family: var(--mono); font-size: .62rem; font-weight: 700; border-radius: 4px; padding: 1px 6px; }
+    .abc-b { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-family: var(--mono); font-size: .62rem; font-weight: 700; border-radius: 4px; padding: 1px 6px; }
+    .abc-c { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; font-family: var(--mono); font-size: .62rem; font-weight: 700; border-radius: 4px; padding: 1px 6px; }
+
+    .v-charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+    .v-charts-row-3 { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 1rem; margin-bottom: 1.25rem; }
+    .v-charts-row-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+    .v-charts-row-colortalle { display: grid; grid-template-columns: 1fr 1.4fr; gap: 1rem; margin-bottom: 1.25rem; }
+    .v-charts-row-3equal { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+    .v-charts-row-2big { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+    .v-chart-scroll { overflow-y: auto; scrollbar-width: thin; }
+    @media (max-width: 1100px) { .v-charts-row-3 { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 900px) { .v-charts-row { grid-template-columns: 1fr; } .v-charts-row-3 { grid-template-columns: 1fr; } .v-charts-row-4 { grid-template-columns: 1fr 1fr; } .v-charts-row-colortalle { grid-template-columns: 1fr; } .v-charts-row-3equal { grid-template-columns: 1fr; } .v-charts-row-2big { grid-template-columns: 1fr; } }
+    @media (max-width: 640px) { .v-charts-row-4 { grid-template-columns: 1fr; } }
+    .v-filter-active { background: #eff6ff !important; border-color: #bfdbfe !important; color: #1d4ed8 !important; }
+    .chart-clickable { cursor: pointer; }
+    .chart-clickable:hover { background: var(--surface2); }
+
+    .loading { text-align: center; padding: 4rem 2rem; color: var(--muted); font-size: .9rem; }
+    .empty { padding: 2rem 1.25rem; text-align: center; color: var(--muted); font-size: .88rem; }
+
+    #debugPanel { display: none; background: #111; color: #0f0; font-family: var(--mono); font-size: .72rem; padding: 1rem; max-height: 200px; overflow-y: auto; margin: 1rem; border-radius: 8px; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #d1cdc7; border-radius: 3px; }
+
+    @media (max-width: 640px) {
+      header { flex-direction: column; align-items: flex-start; padding: .6rem 1rem; gap: .4rem; }
+      .header-right { width: 100%; flex-wrap: nowrap; gap: .4rem; }
+      .btn-sm { flex: 1; text-align: center; font-size: .72rem; padding: .4rem .5rem; }
+      main { padding: .75rem; }
+      .kpi-grid { grid-template-columns: 1fr 1fr; gap: .5rem; }
+      .kpi-value { font-size: 1.6rem; }
+      .filter-bar { flex-direction: column; align-items: stretch; }
+      .filter-bar input[type="text"], .filter-bar select { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="setup">
+  <div class="setup-card">
+    <h1>📈 Ventas Pampero</h1>
+    <p>Conectá Google Sheets de ventas para ver el análisis completo.</p>
+
+    <div class="setup-section">Google Sheets (Ventas)</div>
+    <label>Spreadsheet ID de ventas</label>
+    <input type="text" id="ventasSheetsId" value="1ItxTX3VgiTjiJ7hfy3StEp4BAg7WRoztqbm4e6Q7Iew" autocomplete="off">
+    <label>Published ID (de "Publicar en web", fallback)</label>
+    <input type="text" id="ventasPubId" value="2PACX-1vROu4FWtjNKiBhIYC-Mhe-FZCVJAvaO_2DMevmOhWwq6b2W_ahVJUmWa-059w3Y2A" autocomplete="off">
+    <label>GID de la hoja de ventas</label>
+    <input type="text" id="ventasGidInput" value="980042774" autocomplete="off">
+
+    <button class="btn" onclick="connect()">Ver ventas →</button>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+</div>
+
+<div id="dashboard" style="display:none;flex-direction:column;min-height:100vh">
+  <header>
+    <div class="header-left">
+      <h1>📈 Ventas · Pampero</h1>
+      <span id="boardName"></span>
+    </div>
+    <div class="header-right">
+      <span class="last-update">Actualizado: <span id="lastUpdate">—</span></span>
+      <button class="btn-sm" onclick="loadData()">↺ Recargar</button>
+      <button class="btn-sm" onclick="toggleDebug()">🔍 Debug</button>
+      <button class="btn-sm danger" onclick="resetConfig()">✕ Salir</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="debugPanel"></div>
+    <div class="loading" id="ventasLoading">Cargando datos de ventas…</div>
+    <div id="ventasContent" style="display:none"></div>
+  </main>
+</div>
+
+<script>
+  const VENTAS_SHEETS_ID_DEFAULT = '1ItxTX3VgiTjiJ7hfy3StEp4BAg7WRoztqbm4e6Q7Iew';
+  const VENTAS_PUB_ID_DEFAULT = '2PACX-1vROu4FWtjNKiBhIYC-Mhe-FZCVJAvaO_2DMevmOhWwq6b2W_ahVJUmWa-059w3Y2A';
+  const VENTAS_GID_DEFAULT = '980042774';
+
+  const CATALOG = { "I116": { "desc": "PANTALON CAZADOR CARGO II H. PAMPERO CHICO (36-54)", "proveedores": ["MACATA SA"] }, "111122053": { "desc": "REMERA BASICA JERSEY 24/1 PEINADO LINCOLN", "proveedores": ["Pampenorte S.R.L."] }, "U752": { "desc": "CHALECO SOFTSHELL PAMPERO IND.", "proveedores": ["RANQUEL DEL PLATA SA"] }, "111138100": { "desc": "CHOMBA BASICA PIQUE PAMPERO", "proveedores": ["Pampenorte S.R.L."] }, "111140100": { "desc": "REMERA BASICA JERSEY 24/1 PAMPERO", "proveedores": ["Pampenorte S.R.L."] }, "121134003": { "desc": "BOTINETA PEHUAJO C/ CORDONES", "proveedores": ["RANQUEL DEL PLATA SA"] }, "134171010": { "desc": "GUANTE CUTEX TOUCH ANTI CORTE PU", "proveedores": ["INDUSTRIAL ZONDA SA"] }, "321173003": { "desc": "BOTIN TREKKING CASTOR", "proveedores": ["INTENSIVO SA"] }, "411124020": { "desc": "CAMISA SAN LUIS C.SEMI AB.BOT M/L", "proveedores": ["AZUL PATAGONIA"] }, "411138029": { "desc": "POLO RIO DE LA PLATA", "proveedores": ["C D Way S.A."] }, "811122047": { "desc": "REMERA BASICA M/C ESC RED.", "proveedores": ["C D Way S.A."] }, "I011": { "desc": "TRAJE DE LLUVIA PVC PAMPERO", "proveedores": ["SAFETY SOLUTION SA"] }, "I036": { "desc": "PANTALON DE TRABAJO HOMBRE PAMPERO CH(36-60)", "proveedores": ["MACATA SA"] }, "I075": { "desc": "GUANTE DESCARNE SOLDADOR", "proveedores": ["CANOR - NOGUERA CARLOS JAVIER"] }, "I102": { "desc": "BOMBACHA LISA HOMBRE PAMPERO (38-54)", "proveedores": ["MACATA SA"] }, "I257": { "desc": "PONCHO RESERO ROYAL PAMPERO PVC", "proveedores": ["SAFETY SOLUTION SA"] }, "IC012": { "desc": "CAMISA DE TRABAJO H. M/L PAMPERO CH (36-48)", "proveedores": ["MACATA SA"] }, "IC015": { "desc": "CAMISA DE TRAB H.M/L PAMPERO AZUL CH(38-48)", "proveedores": ["MACATA SA"] }, "U013": { "desc": "ALPARGATA INYECTADA SIMIL YUTE PAMPERO", "proveedores": ["MP NEGOCIOS ARGENTINA SA"] }, "U029": { "desc": "PANTALON CARGO BAGUALES PAMPERO", "proveedores": ["CITEX SRL"] }, "U082": { "desc": "CINTO SAUCE COMB. 40 SOGA PAMPERO", "proveedores": ["Pionera S.A."] }, "U12106004": { "desc": "PANTALON CAIRO PAMPERO", "proveedores": ["MACATA SA"] }, "U178": { "desc": "PANTALON JUNIN CHUPIN", "proveedores": ["RIEMERSO SA"] }, "U412": { "desc": "PANTALON CARGO DEL NORTE H.", "proveedores": ["CITEX SRL"] }, "123410131": { "desc": "BOTIN PATRIO C/FLOR C/P PAMPERO", "proveedores": ["RANQUEL DEL PLATA SA"] }, "13106003": { "desc": "ROMPEVIENTO PAMPERO", "proveedores": ["La Pettit S.A."] }, "136121501": { "desc": "TRAJE DE LLUVIA STORM PAMPERO", "proveedores": ["SAFETY SOLUTION SA"] }, "224122000": { "desc": "PANCHA RANCHO", "proveedores": ["CITEX SRL"] }, "241122007": { "desc": "BOINA VASCA ALGODON 35CM", "proveedores": ["Corbellini Pablo Andres"] }, "244122009": { "desc": "FAJA GUARDA PAMPA 9CM PAMPERO", "proveedores": ["Corbellini Pablo Andres"] }, "245122001": { "desc": "RUANA PESADA C/GUARDA", "proveedores": ["Corbellini Pablo Andres"] }, "3001": { "desc": "CHAPA Nº0 16X21", "proveedores": ["Recalde Gaston Alberto"] }, "311106107": { "desc": "CAMISA PUAN M/CORTA 2 BOLSILLOS", "proveedores": ["Armesto Maria Eugenia"] }, "311106108": { "desc": "CAMISA PUAN PAPPER M/L", "proveedores": ["Armesto Maria Eugenia"] }, "312106024": { "desc": "PANTALON EPEUCEN SOFTSHELL SOLAR PRO H.", "proveedores": ["Armesto Maria Eugenia"] }, "312157000": { "desc": "PANTALON HUEMUL", "proveedores": ["Lopez Omar Alexis"] }, "313106019": { "desc": "CHALECO DORADO SOFSHELL", "proveedores": ["Lopez Omar Alexis"] }, "313106202": { "desc": "CAMPERA PACU", "proveedores": ["Lopez Omar Alexis"] }, "313211142": { "desc": "CAMPERA CURRUHUE H. SOFTSELL", "proveedores": ["Armesto Maria Eugenia"] }, "342106000": { "desc": "CUELLO MULTIFUNCION", "proveedores": ["Lopez Omar Alexis"] }, "411103006": { "desc": "CAMISA OXFORD HOMBRE BARRACAS", "proveedores": ["CITEX SRL"] }, "411106108": { "desc": "CAMISA ACTIVIDAD", "proveedores": ["BREA MARIA PAULA"] }, "411122019": { "desc": "CAMISA CEFERINO POPLIN C. ITAL", "proveedores": ["AZUL PATAGONIA"] }, "411122024": { "desc": "SWEATER SAN CARLOS", "proveedores": ["FOOTWEAR S.R.L"] }, "411122059": { "desc": "CAMPERA SAN CARLOS", "proveedores": ["FOOTWEAR S.R.L"] }, "411122214": { "desc": "SWEATER PINO", "proveedores": ["J.S. Purpura S.R.L."] }, "411122231": { "desc": "SWEATER MORRIS ESCOTE V", "proveedores": ["J.S. Purpura S.R.L."] }, "411122240": { "desc": "CHALECO LENGA", "proveedores": ["J.S. Purpura S.R.L."] }, "411122244": { "desc": "CAMISA MONTE", "proveedores": ["CITEX SRL"] }, "411124001": { "desc": "CAMISA SOLER C/INGLES ML C/B POPLIN", "proveedores": ["AZUL PATAGONIA"] }, "411138008": { "desc": "POLO BASICA PIQUE", "proveedores": ["C D Way S.A."] }, "411139007": { "desc": "CAMPERA CORMORANES", "proveedores": ["C D Way S.A."] }, "411140004": { "desc": "REMERA BASICA PREMIUM 30/1 PAMPERO", "proveedores": ["C D Way S.A."] }, "411140205": { "desc": "REMERA MOLINOS", "proveedores": ["C D Way S.A."] }, "411140216": { "desc": "REMERA COLOME", "proveedores": ["C D Way S.A."] }, "411140218": { "desc": "POLO VOLCAN DOMUYO", "proveedores": ["C D Way S.A."] }, "411514109": { "desc": "CAMISA FRENCH FANTASIA", "proveedores": ["CITEX SRL"] }, "411520002": { "desc": "CAMPERA ITAMBAE", "proveedores": ["J.S. Purpura S.R.L."] }, "411520003": { "desc": "SWEATER AYACUCHO", "proveedores": ["J.S. Purpura S.R.L."] }, "411527012": { "desc": "CAMISA SOLER CUELLO INGLES OXFORD RAYADO", "proveedores": ["AZUL PATAGONIA"] }, "411540007": { "desc": "SWEATER ROBLE", "proveedores": ["J.S. Purpura S.R.L."] }, "412101002": { "desc": "PANTALON CARGO DEL NORTE HOMBRE", "proveedores": ["CITEX SRL"] }, "412106029": { "desc": "PANTALON VIAJERO SECADO RAPIDO", "proveedores": ["BREA MARIA PAULA"] }, "412106032": { "desc": "PANTALON DESMONTABLE", "proveedores": ["BREA MARIA PAULA"] }, "412124001": { "desc": "BERMUDA ROMERILLO PINZADA POPLIN", "proveedores": ["RIEMERSO SA"] }, "412500058": { "desc": "PANTALON ORIGEN DENIM", "proveedores": ["RIEMERSO SA"] }, "412545002": { "desc": "PANTALON FELIPE DENIM", "proveedores": ["RIEMERSO SA"] }, "413101031": { "desc": "CAMPERA RUSTICA", "proveedores": ["Lopez Omar Alexis"] }, "444134005": { "desc": "CINTO HEBILLA FORRADA 35MM", "proveedores": ["Pionera S.A."] }, "444134011": { "desc": "CINTO ALAMO 40MM", "proveedores": ["Pionera S.A."] }, "511138100": { "desc": "CHOMBA DAMA BASICA PIQUE PAMPERO", "proveedores": ["Pampenorte S.R.L."] }, "712106008": { "desc": "BABUCHA ROSAS SOFT SHELL DAMA", "proveedores": ["Armesto Maria Eugenia"] }, "7798331470540": { "desc": "BOLSO DUOMO BAG 19 LTS GR", "proveedores": ["ARTICULOS PROMOCIONALES SA"] }, "7798385662892": { "desc": "MOCHILA TRAFUL", "proveedores": ["ARTICULOS PROMOCIONALES SA"] }, "7798385666784": { "desc": "BOTELLA HYDRA GO 750ML", "proveedores": ["ARTICULOS PROMOCIONALES SA"] }, "7799176003306": { "desc": "BOLSO REMANSO", "proveedores": ["ARTICULOS PROMOCIONALES SA"] }, "811122092": { "desc": "REMERA PETUNIA", "proveedores": ["C D Way S.A."] }, "811122112": { "desc": "CAMISA JAUREGUI POPLIN", "proveedores": ["TORRES RODRIGO SEBASTIAN"] }, "811122263": { "desc": "CAMISA RAUCH BRODERY", "proveedores": ["AZUL PATAGONIA"] }, "811122315": { "desc": "CAMISA LUZ", "proveedores": ["AZUL PATAGONIA"] }, "811124004": { "desc": "CAMISA MAIZANI M/L POPLIN Y FIBRANA", "proveedores": ["AZUL PATAGONIA"] }, "811124033": { "desc": "CAMISA CLARA POPLIN RAYAS", "proveedores": ["TORRES RODRIGO SEBASTIAN"] }, "811138001": { "desc": "POLO TREBOL BLANCO", "proveedores": ["C D Way S.A."] }, "811140064": { "desc": "REMERA ALGODONILLO", "proveedores": ["C D Way S.A."] }, "811140065": { "desc": "REMERA PUERTO PIRAMIDES", "proveedores": ["C D Way S.A."] }, "811168026": { "desc": "REMERA CATEDRAL", "proveedores": ["C D Way S.A."] }, "811500000": { "desc": "CAMISA MAIZANI DENIM M/L", "proveedores": ["TORRES RODRIGO SEBASTIAN"] }, "811505001": { "desc": "CAMISA BASICA MAIZANI POPLIN LISO", "proveedores": ["AZUL PATAGONIA"] }, "811508009": { "desc": "POLO TREBOL ROJO", "proveedores": ["C D Way S.A."] }, "811527004": { "desc": "CAMISA BASICA 70/30 MAIZANI OXFORD RAYADO", "proveedores": ["AZUL PATAGONIA"] }, "811533007": { "desc": "CAMISA BASICA MAIZANI POPLIN RAYADO", "proveedores": ["AZUL PATAGONIA"] }, "812122225": { "desc": "BOMBACHA MARTINA", "proveedores": ["RIEMERSO SA"] }, "812506036": { "desc": "PANTALON CUMBRES DENIM", "proveedores": ["RIEMERSO SA"] }, "842135004": { "desc": "PASCHMINA A CUADROS", "proveedores": ["J.S. Purpura S.R.L."] }, "844134010": { "desc": "CINTO 15MM", "proveedores": ["Pionera S.A."] }, "844134013": { "desc": "CINTO CANELO FLOTER 30MM", "proveedores": ["Pionera S.A."] }, "844134015": { "desc": "CINTO JAZMIN 30MM", "proveedores": ["Pionera S.A."] }, "882106012": { "desc": "MOCHILA PEHUEN CO", "proveedores": ["Pionera S.A."] }, "882106013": { "desc": "BOLSO PEHUEN CO", "proveedores": ["Pionera S.A."] }, "944122002": { "desc": "FAJA GUARDA PAMPA NIÑO", "proveedores": ["Corbellini Pablo Andres"] }, "A004": { "desc": "PANTALON BAHIA CLASICO 5 BOLS. H. PAMPERO", "proveedores": ["RIEMERSO SA"] }, "A200": { "desc": "PANTALON ARECO GABARDINA C/LYCRA", "proveedores": ["RIEMERSO SA"] }, "I004": { "desc": "CHALECO BASICO H. POLAR C/BOLS. PAMPERO", "proveedores": ["RANQUEL DEL PLATA SA"] }, "I005": { "desc": "CAMPERA BASICA H.POLAR C/BOLS. PAMPERO", "proveedores": ["RANQUEL DEL PLATA SA"] }, "I007": { "desc": "CHALECO BASICO TERMICO TRK PAMPERO", "proveedores": ["RANQUEL DEL PLATA SA"] }, "I013": { "desc": "TRAJE DE LLUVIA BIL VEX", "proveedores": ["BAC-DALL ARGENTINA SA"] }, "I026": { "desc": "MAMELUCO MANGA RANGLAN H. PAMPERO AZUL (50-60)", "proveedores": ["MACATA SA"] }, "I042": { "desc": "CAMPERA ANORAK TERMICA TRUCKER PAMPERO", "proveedores": ["RANQUEL DEL PLATA SA"] }, "I043": { "desc": "CAMPERA PARKA BIL VEX", "proveedores": ["BAC-DALL ARGENTINA SA"] }, "I044": { "desc": "CAMPERA DRIVER BIL VEX PREMIUM CORTA", "proveedores": ["BAC-DALL ARGENTINA SA"] }, "I051": { "desc": "BOTA PETROLERA CLASICA PAMPERO", "proveedores": ["RANQUEL DEL PLATA SA"] }, "I060": { "desc": "BOTA PAMPERO JOB MASTER C.LARGA", "proveedores": ["INTENSIVO SA"] }, "I062": { "desc": "BOTA PAMPERO JOB MASTER CON PUNTERA", "proveedores": ["INTENSIVO SA"] }, "I065": { "desc": "BOTA NAUTICA C/CUELLO PVC C.LARGA PAMPERO", "proveedores": ["INTENSIVO SA"] }, "I115": { "desc": "PANTALON CAZADOR CARGO II H. PAMPERO GRANDE (56-70)", "proveedores": ["MACATA SA"] }, "I119": { "desc": "BERMUDA CARGO H. PAMPERO", "proveedores": ["MACATA SA"] }, "I125": { "desc": "CAMISA DENIM FAC TOWN", "proveedores": ["FAC TOWN"] }, "I207": { "desc": "BOTIN PA-709 C/BOX PU BIDENSIDAD", "proveedores": ["DENEB SA"] }, "I213": { "desc": "BOTIN 1709 C/FLOR PU BIDENSIDAD", "proveedores": ["DENEB SA"] }, "I272": { "desc": "BOTIN FUNDIDOR ELAS. 2519 S/PUNTA", "proveedores": ["DENEB SA"] }, "I307": { "desc": "ZAPATILLA P1269 C/PUNTA", "proveedores": ["DENEB SA"] }, "I312": { "desc": "ZAPATO 1609 C/FLOR C/PUNTA", "proveedores": ["DENEB SA"] }, "I322": { "desc": "BOTIN ALENKE (2799) PAMPERO C/P", "proveedores": ["DENEB SA"] }, "I326": { "desc": "CAMPERA DESCARNE SOLDADOR (S-3XL)", "proveedores": ["CANOR - NOGUERA CARLOS JAVIER"] }, "I345": { "desc": "BOTA JOB MASTER PVC PAMPERO BLANCA", "proveedores": ["INTENSIVO SA"] }, "I350": { "desc": "BOMBACHA LISA HOMBRE PAMPERO (56-60)", "proveedores": ["MACATA SA"] }, "I352": { "desc": "BOMBACHA LISA H.PAMPERO AZUL (56-60)", "proveedores": ["MACATA SA"] }, "I368": { "desc": "BALIZA INTERMITENTE P/CONO GRANDE", "proveedores": ["SIN MARCA"] }, "I380": { "desc": "ZAP. P35 C/FLOR S/PUNTA", "proveedores": ["TKW S.A."] }, "I401": { "desc": "TRAJE PREMIUM MOTO STYLE PAMPERO", "proveedores": ["SAFETY SOLUTION SA"] }, "I461": { "desc": "BOTIN 1709 BLANCO C/FLOR C/PUNTA", "proveedores": ["DENEB SA"] }, "I462": { "desc": "BOTIN BIDENSIDAD C/P P 901 DN PAMPERO", "proveedores": ["TKW S.A."] }, "I479": { "desc": "PANTALON JEAN INDUS. WORKER", "proveedores": ["MACATA SA"] }, "I545": { "desc": "BOTIN PAMPERO MARRON C/P P41FM", "proveedores": ["TKW S.A."] }, "I546": { "desc": "BOTIN PAMPERO MARRON SIN PUNTERA P40FM", "proveedores": ["TKW S.A."] }, "I548": { "desc": "BOTIN PAMPERO CUEROBOX C/P P91 BIDENSIDAD", "proveedores": ["TKW S.A."] }, "I564": { "desc": "BOTIN P61 CUERO FLOR BIDENSIDAD C/PUNTA", "proveedores": ["TKW S.A."] }, "I591": { "desc": "PANT. PAMPERO INDUS. H. JEAN (52-60)", "proveedores": ["MACATA SA"] }, "I624": { "desc": "TRAJE DE LLUVIA SLAPPA", "proveedores": ["RINOTEC SRL"] }, "I739": { "desc": "TRAJE DE LLUVIA PREMIUM BIL-VEX", "proveedores": ["BAC-DALL ARGENTINA SA"] }, "I91BR": { "desc": "BOTIN PAMPERO BIDENS. BR 9001-3001", "proveedores": ["TKW S.A."] }, "IC013": { "desc": "CAMISA DE TRABAJO H.M/L PAMPERO MED.(50-56)", "proveedores": ["MACATA SA"] }, "IC014": { "desc": "CAMISA DE TRABAJO H.M/L PAMPERO GRANDE(58-70)", "proveedores": ["MACATA SA"] }, "IC016": { "desc": "CAMISA DE TRAB H.M/L PAMPERO AZUL M(50-56)", "proveedores": ["MACATA SA"] }, "IC017": { "desc": "CAMISA DE TRAB H.M/L PAMPERO AZUL G(58-70)", "proveedores": ["MACATA SA"] }, "IR123": { "desc": "PONCHO RESERO ECONOMICO", "proveedores": ["SIN MARCA"] }, "N019": { "desc": "BOMBACHA LISA NIÑO PAMPERO", "proveedores": ["MACATA SA"] }, "PA3010": { "desc": "ZAPATILLA 3010 PAMPERO TREKKING", "proveedores": ["DENEB SA"] }, "RI249": { "desc": "BOXER PAMPERO", "proveedores": ["C D Way S.A."] }, "U007": { "desc": "CAMISA ESTANCIERA Hombre. M/L PAMPERO", "proveedores": ["CITEX SRL"] }, "U011": { "desc": "ALPARGATA REFORZADA ADULTO PAMPERO", "proveedores": ["CITEX SRL"] }, "U030": { "desc": "BERMUDA CONDORES PAMPERO", "proveedores": ["CITEX SRL"] }, "U034": { "desc": "PANTALON CARGO RIPSTOP CH (38-54) PAMPERO", "proveedores": ["MACATA SA"] }, "U056": { "desc": "PANT. PAMPERO INDUS. H. JEAN (38-50)", "proveedores": ["MACATA SA"] }, "U063": { "desc": "PANTALON BAHIA POPLIN C/LYCRA PAMPERO", "proveedores": ["RIEMERSO SA"] }, "U070": { "desc": "CHALECO TRELEW H. MATELASEE PAMPERO", "proveedores": ["FOOTWEAR S.R.L"] }, "U084": { "desc": "CINTO COIHUE LISO 40 ENGRASADO PAMPERO", "proveedores": ["Pionera S.A."] }, "U088": { "desc": "CINTO TAPIAL H. 40 CUERO PAMPERO", "proveedores": ["Pionera S.A."] }, "U089": { "desc": "CINTO CAVEN SUELA 40 MM PAMPERO", "proveedores": ["Pionera S.A."] }, "U091": { "desc": "BILLETERA ALERCE H. COMB. LONA PAMPERO", "proveedores": ["Pionera S.A."] }, "U102": { "desc": "BOMBACHA LISA MUJER PAMPERO", "proveedores": ["MACATA SA"] }, "U11122003": { "desc": "CAMISA CAMPO", "proveedores": ["Lopez Omar Alexis"] }, "U11157000": { "desc": "CAMISA RIPSTOP", "proveedores": ["Lopez Omar Alexis"] }, "U122": { "desc": "PANTALON BARRACAS CLASICO M. PAMPERO", "proveedores": ["RIEMERSO SA"] }, "U123": { "desc": "PANT. CANDELARIA M. C/LYCRA PAMPERO", "proveedores": ["RIEMERSO SA"] }, "U145": { "desc": "PANTALON CARGO ELASTIZADO PAMPERO FIT", "proveedores": ["MACATA SA"] }, "U159": { "desc": "CHALECO PEHUEN PAMPERO", "proveedores": ["RANQUEL DEL PLATA SA"] }, "U176": { "desc": "BOMBACHA OLIVERA H. POPLIN", "proveedores": ["RIEMERSO SA"] }, "U2000": { "desc": "BOTIN TREKKING LANIN", "proveedores": ["INTENSIVO SA"] }, "U2001": { "desc": "BOTIN TREKKIN TRONADOR", "proveedores": ["INTENSIVO SA"] }, "U2003": { "desc": "ZAPATILLA TREKKING OTTO", "proveedores": ["INTENSIVO SA"] }, "U209": { "desc": "PANTALON CARGO RIPSTOP GR (56-60) PAMPERO", "proveedores": ["MACATA SA"] }, "U237": { "desc": "CINTO YATAY BORD. ROMBO 25 PAMPERO", "proveedores": ["Pionera S.A."] }, "U24001D": { "desc": "CAMISA MAIZANI LISO", "proveedores": ["AZUL PATAGONIA"] }, "U325": { "desc": "TERMERA CUERO OLMOS", "proveedores": ["Pionera S.A."] }, "U371": { "desc": "BOTIN RURAL ARRIERO", "proveedores": ["TKW S.A."] }, "U372": { "desc": "BOTIN RURAL RODEO", "proveedores": ["TKW S.A."] }, "U392": { "desc": "CINTO LARREA BORDADO 35MM", "proveedores": ["Pionera S.A."] }, "U396": { "desc": "NECESSAIRE PICABUEY LONA CHICO", "proveedores": ["Pionera S.A."] }, "U411": { "desc": "PANTALON DAMA CARGO DEL NORTE", "proveedores": ["CITEX SRL"] }, "U41160000": { "desc": "AUSTRALIANO CLASICO", "proveedores": ["Mel Sombreros S.R.L."] }, "U41160001": { "desc": "AUSTRALIANO CAZA Y PESCA", "proveedores": ["Mel Sombreros S.R.L."] }, "U41171004": { "desc": "AUSTRALIANO PALMA VERDE", "proveedores": ["Mel Sombreros S.R.L."] }, "U415": { "desc": "ALPARGATA YUTE REFORZADA", "proveedores": ["CITEX SRL"] }, "U433": { "desc": "NECESSAIRE PICABUEY LONA GRANDE", "proveedores": ["PAMPERO"] }, "U454": { "desc": "BOMBACHA ALUMINE M.POPLIN PAMP.", "proveedores": ["RIEMERSO SA"] }, "U596": { "desc": "CAMISA CAIRO FAST DRY", "proveedores": ["MACATA SA"] }, "U601": { "desc": "CHALECO CANVAS", "proveedores": ["MACATA SA"] }, "U616": { "desc": "FAJA TRINCADA 9CM", "proveedores": ["Corbellini Pablo Andres"] }, "U751": { "desc": "CAMPERA SOFTSHELL PAMPERO IND.", "proveedores": ["RANQUEL DEL PLATA SA"] }, "U82106000": { "desc": "MOCHILA EZEIZA", "proveedores": ["Pionera S.A."] }, "U82106001": { "desc": "MOCHILA MAR DEL PLATA", "proveedores": ["Pionera S.A."] }, "I010": { "desc": "BUZO BASICO H.FRIZA PAMPERO", "proveedores": ["GUADAL RM SRL"] }, "I012": { "desc": "CAPA DE LLUVIA BIL VEX", "proveedores": ["BAC-DALL ARGENTINA SA"] }, "I029": { "desc": "PANTALON TRUCKER TERMICO PAMPERO", "proveedores": ["RANQUEL DEL PLATA SA"] }, "I099": { "desc": "BOMBACHA URION H.LIVIANA PAMPERO", "proveedores": ["MACATA SA"] }, "I117": { "desc": "PANTALON CAZ. CARGO II H. PAMPERO AZUL CH (36-54)", "proveedores": ["MACATA SA"] }, "I118": { "desc": "PANTALON CAZ. CARGO II H. PAMPER AZUL GD (56-70)", "proveedores": ["MACATA SA"] }, "I218": { "desc": "PANTALON CARGO DAMA PAMPERO", "proveedores": ["MACATA SA"] }, "I351": { "desc": "BOMBACHA LISA H. PAMPERO AZUL (38-54)", "proveedores": ["MACATA SA"] }, "I382": { "desc": "JEAN DAMA IND. ELASTIZADO PAMPERO", "proveedores": ["MACATA SA"] }, "I503": { "desc": "CHALECO MINERO REFLECTIVO PAMPERO", "proveedores": ["MACATA SA"] }, "I508": { "desc": "BERMUDA RIPSTOP PAMPERO CH. (38-54)", "proveedores": ["MACATA SA"] }, "I585": { "desc": "CAMISA DE TRAB. H M/L JEAN PAMPERO (50-60)", "proveedores": ["MACATA SA"] }, "I606": { "desc": "BOTIN P401 BOX C/PUNTA PU AMARILLA", "proveedores": ["DENEB SA"] }, "U036": { "desc": "CAMISA OXFORD H. M/L PLUSNORTE", "proveedores": ["Pampenorte S.R.L."] }, "U100": { "desc": "CAMISA ESTANCIERA Mujer M/L PAMPERO", "proveedores": ["CITEX SRL"] }, "U150": { "desc": "TERMO IGUAZU 1.1 LIT. PAMPERO", "proveedores": ["ARTICULOS PROMOCIONALES SA"] }, "HC211024": { "desc": "CHALECO TRIP", "proveedores": ["MACATA SA"] }, "121134004": { "desc": "BOTIN HUEPIL 2701 PAMPERO CUERO FLOR C/P BIDENSIDAD", "proveedores": ["DENEB SA"] }, "I052": { "desc": "ZAPATO CONSTRUCTOR C/P PU PAMPERO", "proveedores": ["PAMPERO"] }, "I108": { "desc": "GUANTE REFORCER C/KEVLAR", "proveedores": ["PAMPERO"] }, "I560": { "desc": "BOTIN BAQUEANO S/P PAMPERO", "proveedores": ["RANQUEL DEL PLATA SA"] }, "I038": { "desc": "PANTALON DE TRAB. H. PAMPERO AZUL CH(36-60)", "proveedores": ["MACATA SA"] } };
+
+  const CODIGO_ALIAS = {
+    'I115': 'I116', 'I117': 'I116', 'I118': 'I116',
+    'I350': 'I102', 'I351': 'I102', 'I352': 'I102',
+    'I038': 'I036',
+    'IC013': 'IC012', 'IC014': 'IC012', 'IC015': 'IC012', 'IC016': 'IC012', 'IC017': 'IC012'
+  };
+  const ALIAS_DESC = {
+    'I116': 'PANTALON CAZADOR CARGO II H. PAMPERO',
+    'I102': 'BOMBACHA LISA HOMBRE PAMPERO',
+    'I036': 'PANTALON DE TRABAJO H. PAMPERO',
+    'IC012': 'CAMISA DE TRABAJO H.M/L PAMPERO'
+  };
+
+  // STATE
+  let VENTAS_SHEETS_ID = '', VENTAS_PUB_ID = '', VENTAS_GID = '';
+  let ventasData = [], ventasHeaders = [], ventasColTypes = [];
+  let vFechaDesde = '', vFechaHasta = '';
+  let vVendedores = new Set();
+  let vArticulosFilter = new Set();
+  let vArticuloSearch = '';
+  let _vCharts = {};
+  let vColoresFilter = new Set();
+  let vTallesFilter  = new Set();
+  let vListaFilter   = new Set();
+  let vOrigenFilter  = new Set();
+  let vProveedoresFilter = new Set();
+  let vProveedorSearch = '';
+  let vMesRapido = '';
+  let vMayoristaExpandido = new Set();
+  let vMayoristaClienteExpandido = new Set();
+  let debugLog = [];
+
+  // UTILS
+  function norm(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+
+  const CATALOG_UPPER = Object.fromEntries(Object.entries(CATALOG).map(([k,v]) => [k.toUpperCase(), v]));
+  function getCatalog(codigo) {
+    if (!codigo) return null;
+    return CATALOG_UPPER[codigo.toUpperCase()] || null;
+  }
+
+  function parseSKU(skuStr) {
+    if (!skuStr) return { codigo: '', color: '', talle: '' };
+    const parts = skuStr.trim().split('-');
+    if (parts.length < 2) return { codigo: skuStr.trim(), color: '', talle: '' };
+    const talle = parts[parts.length - 1];
+    const color = parts[parts.length - 2];
+    const codigo = parts.slice(0, parts.length - 2).join('-');
+    return { codigo, color, talle };
+  }
+
+  function parseCliente(str) {
+    str = (str || '').trim();
+    if (!str) return { codigo: '', nombre: '' };
+    const m = str.match(/^(\S+)\s+(.+)$/);
+    if (m) return { codigo: m[1], nombre: m[2].trim() };
+    return { codigo: '', nombre: str };
+  }
+
+  function log(msg) {
+    debugLog.push(msg);
+    const el = document.getElementById('debugPanel');
+    if (el) { el.innerHTML = debugLog.slice(-40).map(l => `<div>${l}</div>`).join(''); el.scrollTop = el.scrollHeight; }
+  }
+  function toggleDebug() {
+    const el = document.getElementById('debugPanel');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+
+  // CSV PARSER
+  function parseCSV(text) {
+    const rows = [];
+    let row = [], cur = '', inQ = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQ) {
+        if (ch === '"' && text[i+1] === '"') { cur += '"'; i++; }
+        else if (ch === '"') inQ = false;
+        else cur += ch;
+      } else {
+        if (ch === '"') { inQ = true; }
+        else if (ch === ',') { row.push(cur); cur = ''; }
+        else if (ch === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+        else if (ch === '\r') { /* skip */ }
+        else cur += ch;
+      }
+    }
+    if (cur || row.length) { row.push(cur); rows.push(row); }
+    return rows.filter(r => r.some(c => c.trim()));
+  }
+
+  function applyVentasGviz(data) {
+    const allRows = data.table.rows || [];
+    if (!allRows.length) { ventasData = []; ventasHeaders = []; ventasColTypes = []; return; }
+    const gvizCols = data.table.cols || [];
+    const hasLabels = gvizCols.some(c => c.label && c.label.trim());
+    let dataRows;
+    if (hasLabels) {
+      ventasHeaders = gvizCols.map(c => c.label || c.id || '');
+      ventasColTypes = gvizCols.map(c => c.type || 'string');
+      dataRows = allRows;
+    } else {
+      const hRow = allRows[0];
+      ventasHeaders = (hRow.c || []).map((cell, i) => (cell && cell.v != null ? String(cell.v).trim() : `Col${i+1}`));
+      ventasColTypes = gvizCols.map(c => c.type || 'string');
+      dataRows = allRows.slice(1);
+    }
+    const colCount = ventasHeaders.length;
+    ventasData = dataRows.filter(row => row && row.c).map(row => {
+      return Array.from({ length: colCount }, (_, i) => {
+        const cell = row.c ? row.c[i] : null;
+        if (!cell) return null;
+        if (cell.f && (ventasColTypes[i] === 'date' || ventasColTypes[i] === 'datetime')) return cell.f;
+        return cell.v !== undefined ? cell.v : null;
+      });
+    }).filter(row => row.some(v => v !== null && v !== ''));
+  }
+
+  async function loadVentasSheetData() {
+    if (VENTAS_SHEETS_ID) {
+      try {
+        const gvizData = await new Promise((resolve, reject) => {
+          const cb = '__gviz_v_' + Date.now();
+          const url = `https://docs.google.com/spreadsheets/d/${VENTAS_SHEETS_ID}/gviz/tq?tqx=out:json;responseHandler:${cb}&gid=${VENTAS_GID}`;
+          log(`Fetching Ventas gviz: ${url}`);
+          const script = document.createElement('script');
+          const cleanup = () => { delete window[cb]; script.remove(); };
+          const timer = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 8000);
+          window[cb] = d => { clearTimeout(timer); cleanup(); resolve(d); };
+          script.onerror = () => { clearTimeout(timer); cleanup(); reject(new Error('script error')); };
+          script.src = url;
+          document.head.appendChild(script);
+        });
+        if (gvizData.status !== 'error') {
+          applyVentasGviz(gvizData);
+          log(`✓ Ventas gviz: ${ventasData.length} filas — cols: ${ventasHeaders.join(', ')}`);
+          return;
+        }
+      } catch (e) {
+        log(`Ventas gviz falló (${e.message}), intentando CSV…`);
+      }
+    }
+    const csvUrl = `https://docs.google.com/spreadsheets/d/e/${VENTAS_PUB_ID}/pub?gid=${VENTAS_GID}&single=true&output=csv`;
+    log(`Fetching Ventas CSV: ${csvUrl}`);
+    const res = await fetch(csvUrl);
+    if (!res.ok) throw new Error(`HTTP ${res.status} al cargar ventas`);
+    const text = await res.text();
+    const rows = parseCSV(text);
+    if (!rows.length) { ventasData = []; ventasHeaders = []; ventasColTypes = []; return; }
+    ventasHeaders = rows[0].map(h => h.trim());
+    const colCount = ventasHeaders.length;
+    ventasColTypes = Array.from({ length: colCount }, (_, i) => {
+      const samples = rows.slice(1, 21).map(r => (r[i] || '').trim()).filter(Boolean);
+      if (!samples.length) return 'string';
+      const numOk = samples.filter(s => !isNaN(s.replace(/[$.,%\s]/g,'').replace(',','.'))).length;
+      return numOk / samples.length >= 0.6 ? 'number' : 'string';
+    });
+    ventasData = rows.slice(1).map(row =>
+      Array.from({ length: colCount }, (_, i) => {
+        const raw = (row[i] ?? '').trim();
+        if (!raw) return null;
+        if (ventasColTypes[i] === 'number') {
+          const n = parseFloat(raw.replace(/\./g,'').replace(',','.').replace(/[^0-9.\-]/g,''));
+          return isNaN(n) ? raw : n;
+        }
+        return raw;
+      })
+    ).filter(row => row.some(v => v !== null && v !== ''));
+    log(`✓ Ventas CSV: ${ventasData.length} filas — cols: ${ventasHeaders.join(', ')}`);
+  }
+
+  async function loadData() {
+    debugLog = [];
+    document.getElementById('ventasLoading').style.display = 'block';
+    document.getElementById('ventasContent').style.display = 'none';
+    try {
+      await loadVentasSheetData();
+      renderVentas();
+    } catch(e) {
+      document.getElementById('ventasLoading').innerHTML = `<span style="color:var(--danger)">Error: ${e.message}. Verificá que la hoja esté publicada.</span>`;
+    }
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('es-AR');
+  }
+
+  // VENTAS HELPERS
+  function fmtPesos(n) {
+    if (n == null || isNaN(n)) return '—';
+    return '$ ' + Math.round(n).toLocaleString('es-AR');
+  }
+
+  function getVentasCols() {
+    const hLow = ventasHeaders.map(h => norm(h));
+    const find = (...kws) => {
+      const sorted = [...kws].sort((a, b) => b.length - a.length);
+      for (const k of sorted) {
+        const idx = hLow.findIndex(h => h.includes(norm(k)));
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    };
+    return {
+      totalCol:        find('monto neto', 'importe total', 'total general', 'total', 'importe', 'subtotal', 'neto', 'monto', 'valor', 'precio', 'facturado', 'venta'),
+      cantCol:         find('cantidad', 'cant', 'unidades', 'qty'),
+      fechaCol:        find('fecha', 'date'),
+      vendedorCol:     find('vendedor'),
+      codigoCol:       find('codigo', 'cod', 'sku', 'articulo', 'producto'),
+      comprobanteCol:  find('comprobante', 'nro comprobante', 'numero comprobante', 'nro. comprobante', 'factura', 'nro factura', 'numero'),
+      descCol:         find('descripcion', 'descripción', 'detalle', 'nombre', 'desc'),
+      colorCol:        find('color'),
+      talleCol:        find('talle', 'size'),
+      listaCol:        find('lista'),
+      origenCol:       find('origen', 'sucursal'),
+      proveedorCol:    find('proveedor - nombre', 'proveedor'),
+      clienteCol:      find('cliente'),
+    };
+  }
+
+  function parseVentasFecha(str) {
+    if (!str) return null;
+    str = String(str).trim();
+    let m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m) return new Date(+m[3], +m[2]-1, +m[1]);
+    m = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+    const d = new Date(str);
+    return isNaN(d) ? null : d;
+  }
+
+  function applyVentasFiltros(rows, cols) {
+    return rows.filter(row => {
+      if ((vFechaDesde || vFechaHasta) && cols.fechaCol >= 0) {
+        const d = parseVentasFecha(row[cols.fechaCol]);
+        if (d) {
+          if (vFechaDesde) { const dd = parseVentasFecha(vFechaDesde); if (dd && d < dd) return false; }
+          if (vFechaHasta) { const dh = parseVentasFecha(vFechaHasta); if (dh && d > dh) return false; }
+        }
+      }
+      if (vVendedores.size > 0 && cols.vendedorCol >= 0) {
+        if (!vVendedores.has(String(row[cols.vendedorCol] ?? '').trim())) return false;
+      }
+      if (vColoresFilter.size > 0 && cols.colorCol >= 0) {
+        if (!vColoresFilter.has(String(row[cols.colorCol] ?? '').trim())) return false;
+      }
+      if (vTallesFilter.size > 0 && cols.talleCol >= 0) {
+        if (!vTallesFilter.has(String(row[cols.talleCol] ?? '').trim())) return false;
+      }
+      if (vListaFilter.size > 0 && cols.listaCol >= 0) {
+        if (!vListaFilter.has(String(row[cols.listaCol] ?? '').trim())) return false;
+      }
+      if (vOrigenFilter.size > 0 && cols.origenCol >= 0) {
+        if (!vOrigenFilter.has(String(row[cols.origenCol] ?? '').trim())) return false;
+      }
+      if (vArticulosFilter.size > 0 && cols.codigoCol >= 0) {
+        const rawCod = String(row[cols.codigoCol] ?? '').trim();
+        const { codigo } = parseSKU(rawCod);
+        const baseCod = (CODIGO_ALIAS[(codigo || rawCod).toUpperCase()] || (codigo || rawCod)).toUpperCase();
+        if (!vArticulosFilter.has(baseCod) && !vArticulosFilter.has(rawCod.toUpperCase())) return false;
+      }
+      if (vProveedoresFilter.size > 0 && cols.proveedorCol >= 0) {
+        if (!vProveedoresFilter.has(String(row[cols.proveedorCol] ?? '').trim())) return false;
+      }
+      return true;
+    });
+  }
+
+  function computeVentasProductStats(filtered, cols) {
+    const byProd = {};
+    let sumaTotal = 0, sumaUnits = 0;
+    filtered.forEach(row => {
+      const rawCod = cols.codigoCol >= 0 ? String(row[cols.codigoCol] ?? '').trim() : '';
+      const { codigo } = parseSKU(rawCod);
+      const baseKey = (CODIGO_ALIAS[(codigo || rawCod).toUpperCase()] || (codigo || rawCod)).toUpperCase();
+      const key = baseKey || '(sin código)';
+      const cat = getCatalog(key) || getCatalog(rawCod);
+      const rawDesc = cols.descCol >= 0 ? String(row[cols.descCol] ?? '').trim() : '';
+      const desc = rawDesc || (cat ? cat.desc : (ALIAS_DESC[key] || ''));
+      const units = cols.cantCol >= 0 ? (parseFloat(row[cols.cantCol] ?? 0) || 0) : 0;
+      const total = cols.totalCol >= 0 ? (parseFloat(row[cols.totalCol] ?? 0) || 0) : 0;
+      if (!byProd[key]) byProd[key] = { key, desc: desc || key, units: 0, total: 0, ops: 0 };
+      else if (!byProd[key].desc && desc) byProd[key].desc = desc;
+      byProd[key].units += units;
+      byProd[key].total += total;
+      byProd[key].ops += 1;
+      sumaTotal += total;
+      sumaUnits += units;
+    });
+    return { byProd, sumaTotal, sumaUnits, nOps: filtered.length };
+  }
+
+  function computeVentasMonthStats(filtered, cols) {
+    const byMonth = {};
+    filtered.forEach(row => {
+      if (cols.fechaCol < 0) return;
+      const d = parseVentasFecha(row[cols.fechaCol]);
+      if (!d || isNaN(d)) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      if (!byMonth[key]) byMonth[key] = { units: 0, total: 0 };
+      if (cols.cantCol >= 0) byMonth[key].units += parseFloat(row[cols.cantCol] ?? 0) || 0;
+      if (cols.totalCol >= 0) byMonth[key].total += parseFloat(row[cols.totalCol] ?? 0) || 0;
+    });
+    return byMonth;
+  }
+
+  function computeDateRangeMonths(filtered, cols) {
+    if (cols.fechaCol < 0) return 1;
+    let minD = null, maxD = null;
+    filtered.forEach(row => {
+      const d = parseVentasFecha(row[cols.fechaCol]);
+      if (!d || isNaN(d)) return;
+      if (!minD || d < minD) minD = d;
+      if (!maxD || d > maxD) maxD = d;
+    });
+    if (!minD || !maxD) return 1;
+    const months = (maxD.getFullYear() - minD.getFullYear()) * 12 + (maxD.getMonth() - minD.getMonth()) + 1;
+    return Math.max(1, months);
+  }
+
+  // Determina a qué grupo de "mayorista" pertenece una lista de precios.
+  // Incluye tanto la lista "Mayorista" propiamente dicha como "Lista 3",
+  // que es la lista usada para distribuidoras y también es venta mayorista.
+  function mayoristaGrupoDeLista(lista) {
+    const n = norm(lista);
+    if (n.includes('mayorista')) return 'Mayorista';
+    if (n.includes('lista 3') || n.includes('lista3') || n.includes('distribuidora')) return 'Lista 3 (Distribuidora)';
+    return null;
+  }
+
+  function computeMayoristaClientes(filtered, cols) {
+    if (cols.listaCol < 0 || cols.comprobanteCol < 0) return { facturas: [], distinctClientCount: 0, groups: [] };
+    const facturas = {};
+    filtered.forEach(row => {
+      const lista = String(row[cols.listaCol] ?? '').trim();
+      const grupo = mayoristaGrupoDeLista(lista);
+      if (!grupo) return;
+      const comp = String(row[cols.comprobanteCol] ?? '').trim();
+      if (!comp) return;
+      const key = grupo + '||' + comp;
+      if (!facturas[key]) {
+        const rawCliente = cols.clienteCol >= 0 ? String(row[cols.clienteCol] ?? '').trim() : '';
+        const { codigo: clienteCodigo, nombre: clienteNombre } = parseCliente(rawCliente);
+        facturas[key] = {
+          comprobante: comp,
+          lista, grupo,
+          vendedor: cols.vendedorCol >= 0 ? String(row[cols.vendedorCol] ?? '').trim() : '',
+          fecha: cols.fechaCol >= 0 ? String(row[cols.fechaCol] ?? '').trim() : '',
+          fechaObj: cols.fechaCol >= 0 ? parseVentasFecha(row[cols.fechaCol]) : null,
+          clienteKey: clienteCodigo || clienteNombre || '(sin cliente)',
+          clienteCodigo,
+          clienteNombre: clienteNombre || '(sin cliente)',
+          total: 0, unidades: 0, items: []
+        };
+      }
+      const cant = cols.cantCol >= 0 ? (parseFloat(row[cols.cantCol] ?? 0) || 0) : 0;
+      const monto = cols.totalCol >= 0 ? (parseFloat(row[cols.totalCol] ?? 0) || 0) : 0;
+      const rawCod = cols.codigoCol >= 0 ? String(row[cols.codigoCol] ?? '').trim() : '';
+      const { codigo } = parseSKU(rawCod);
+      const baseKey = (CODIGO_ALIAS[(codigo || rawCod).toUpperCase()] || (codigo || rawCod)).toUpperCase();
+      const cat = getCatalog(baseKey) || getCatalog(rawCod);
+      const rawDesc = cols.descCol >= 0 ? String(row[cols.descCol] ?? '').trim() : '';
+      const desc = rawDesc || (cat ? cat.desc : (ALIAS_DESC[baseKey] || ''));
+      facturas[key].total += monto;
+      facturas[key].unidades += cant;
+      facturas[key].items.push({
+        codigo: baseKey || rawCod || '(s/código)',
+        desc,
+        color: cols.colorCol >= 0 ? String(row[cols.colorCol] ?? '').trim() : '',
+        talle: cols.talleCol >= 0 ? String(row[cols.talleCol] ?? '').trim() : '',
+        cantidad: cant, monto
+      });
+    });
+
+    const facturasArr = Object.values(facturas);
+    const distinctClientCount = new Set(facturasArr.map(f => f.clienteKey)).size;
+
+    // Agrupa por lista (Mayorista / Lista 3) y, dentro de cada grupo, por cliente.
+    const gruposMap = {};
+    facturasArr.forEach(f => {
+      if (!gruposMap[f.grupo]) gruposMap[f.grupo] = {};
+      const clientes = gruposMap[f.grupo];
+      if (!clientes[f.clienteKey]) {
+        clientes[f.clienteKey] = {
+          clienteKey: f.clienteKey, groupKey: f.grupo + '||' + f.clienteKey,
+          clienteCodigo: f.clienteCodigo, clienteNombre: f.clienteNombre,
+          facturas: [], total: 0, unidades: 0
+        };
+      }
+      clientes[f.clienteKey].facturas.push(f);
+      clientes[f.clienteKey].total += f.total;
+      clientes[f.clienteKey].unidades += f.unidades;
+    });
+
+    const GRUPO_ORDEN = ['Mayorista', 'Lista 3 (Distribuidora)'];
+    const groups = Object.keys(gruposMap)
+      .sort((a,b) => GRUPO_ORDEN.indexOf(a) - GRUPO_ORDEN.indexOf(b))
+      .map(grupo => {
+        const clientes = Object.values(gruposMap[grupo]);
+        clientes.forEach(c => {
+          c.facturas.sort((a,b) =>
+            (b.fechaObj ? b.fechaObj.getTime() : 0) - (a.fechaObj ? a.fechaObj.getTime() : 0) || a.comprobante.localeCompare(b.comprobante)
+          );
+        });
+        clientes.sort((a,b) => b.total - a.total || a.clienteNombre.localeCompare(b.clienteNombre));
+        const total = clientes.reduce((s,c) => s + c.total, 0);
+        const unidades = clientes.reduce((s,c) => s + c.unidades, 0);
+        return { grupo, clientes, total, unidades, facturaCount: clientes.reduce((s,c) => s + c.facturas.length, 0) };
+      });
+
+    return { facturas: facturasArr, distinctClientCount, groups };
+  }
+
+  const MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  function renderVentasArtDropdown() {
+    const inp = document.getElementById('vArticuloInput');
+    const dd = document.getElementById('vArtDropdown');
+    if (!inp || !dd) return;
+    const cols = getVentasCols();
+    if (cols.codigoCol < 0) { dd.style.display = 'none'; return; }
+    const t = norm(inp.value);
+    const allProductos = [...new Set(ventasData.map(r => {
+      const rawCod = String(r[cols.codigoCol] ?? '').trim();
+      const { codigo } = parseSKU(rawCod);
+      return (CODIGO_ALIAS[(codigo||rawCod).toUpperCase()] || (codigo||rawCod)).toUpperCase();
+    }).filter(Boolean))].sort();
+    const matches = allProductos.filter(p => {
+      const cat = getCatalog(p);
+      return !t || norm(p).includes(t) || (cat && norm(cat.desc).includes(t));
+    }).slice(0, 20);
+    if (!matches.length) { dd.style.display = 'none'; return; }
+    dd.innerHTML = matches.map(p => {
+      const sel = vArticulosFilter.has(p);
+      const cat = getCatalog(p);
+      const desc = cat ? cat.desc : (ALIAS_DESC[p] || '');
+      const e = p.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<div class="sf-dd-item${sel?' sf-dd-selected':''}" onmousedown="vArticulosFilter.has('${e}')?vArticulosFilter.delete('${e}'):vArticulosFilter.add('${e}');vArticuloSearch='';document.getElementById('vArtDropdown').style.display='none';renderVentas()">
+        <span class="sf-dd-check">${sel?'✓':''}</span>
+        <span style="font-family:var(--mono);font-weight:700;color:var(--accent2);font-size:.82rem">${p}</span>
+        ${desc?`<span style="color:var(--muted);font-size:.75rem;margin-left:.3rem">${desc}</span>`:''}
+      </div>`;
+    }).join('');
+    dd.style.display = 'block';
+  }
+
+  function renderVentasProvDropdown() {
+    const inp = document.getElementById('vProveedorInput');
+    const dd = document.getElementById('vProvDropdown');
+    if (!inp || !dd) return;
+    const cols = getVentasCols();
+    if (cols.proveedorCol < 0) { dd.style.display = 'none'; return; }
+    const t = norm(inp.value);
+    const allProvs = [...new Set(ventasData.map(r => String(r[cols.proveedorCol] ?? '').trim()).filter(Boolean))].sort();
+    const matches = allProvs.filter(p => !t || norm(p).includes(t)).slice(0, 30);
+    if (!matches.length) { dd.style.display = 'none'; return; }
+    dd.innerHTML = matches.map(p => {
+      const sel = vProveedoresFilter.has(p);
+      const e = p.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<div class="sf-dd-item${sel?' sf-dd-selected':''}" onmousedown="vProveedoresFilter.has('${e}')?vProveedoresFilter.delete('${e}'):vProveedoresFilter.add('${e}');vProveedorSearch='';document.getElementById('vProvDropdown').style.display='none';renderVentas()">
+        <span class="sf-dd-check">${sel?'✓':''}</span>
+        <span style="font-size:.82rem">${p}</span>
+      </div>`;
+    }).join('');
+    dd.style.display = 'block';
+  }
+
+  function clearVentasFiltros() {
+    vFechaDesde = ''; vFechaHasta = ''; vMesRapido = '';
+    vVendedores.clear(); vArticulosFilter.clear(); vColoresFilter.clear();
+    vTallesFilter.clear(); vListaFilter.clear(); vOrigenFilter.clear(); vProveedoresFilter.clear();
+    vArticuloSearch = ''; vProveedorSearch = '';
+    renderVentas();
+  }
+
+  function applyMesRapido() {
+    if (!vMesRapido) { vFechaDesde = ''; vFechaHasta = ''; return; }
+    const [y, m] = vMesRapido.split('-');
+    const lastDay = new Date(+y, +m, 0).getDate();
+    vFechaDesde = `${y}-${m}-01`;
+    vFechaHasta = `${y}-${m}-${String(lastDay).padStart(2,'0')}`;
+  }
+
+  function computeVentasDayStats(filtered, cols) {
+    const byDay = {};
+    filtered.forEach(row => {
+      if (cols.fechaCol < 0) return;
+      const d = parseVentasFecha(row[cols.fechaCol]);
+      if (!d || isNaN(d)) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      if (!byDay[key]) byDay[key] = { units: 0, total: 0 };
+      if (cols.cantCol >= 0) byDay[key].units += parseFloat(row[cols.cantCol] ?? 0) || 0;
+      if (cols.totalCol >= 0) byDay[key].total += parseFloat(row[cols.totalCol] ?? 0) || 0;
+    });
+    return byDay;
+  }
+
+  function computeByField(filtered, colIdx, cantColIdx, totalColIdx) {
+    if (colIdx < 0) return {};
+    const map = {};
+    filtered.forEach(row => {
+      const key = String(row[colIdx] ?? '').trim();
+      if (!key) return;
+      const cant  = cantColIdx  >= 0 ? (parseFloat(row[cantColIdx]  ?? 0) || 0) : 1;
+      const total = totalColIdx >= 0 ? (parseFloat(row[totalColIdx] ?? 0) || 0) : 0;
+      if (!map[key]) map[key] = { total: 0, units: 0, count: 0 };
+      map[key].total += total;
+      map[key].units += cant;
+      map[key].count += 1;
+    });
+    return map;
+  }
+
+  function computeByProveedor(filtered, cols) {
+    const map = {};
+    filtered.forEach(row => {
+      let provs;
+      if (cols.proveedorCol >= 0) {
+        const pv = String(row[cols.proveedorCol] ?? '').trim();
+        provs = pv ? [pv] : ['Sin proveedor'];
+      } else if (cols.codigoCol >= 0) {
+        const rawCod = String(row[cols.codigoCol] ?? '').trim();
+        const { codigo } = parseSKU(rawCod);
+        const baseKey = (CODIGO_ALIAS[(codigo || rawCod).toUpperCase()] || (codigo || rawCod)).toUpperCase();
+        const cat = getCatalog(baseKey) || getCatalog(rawCod);
+        provs = (cat && cat.proveedores && cat.proveedores.length) ? cat.proveedores : ['Sin proveedor'];
+      } else {
+        provs = ['Sin proveedor'];
+      }
+      const total = cols.totalCol >= 0 ? (parseFloat(row[cols.totalCol] ?? 0) || 0) : 0;
+      provs.forEach(p => {
+        if (!map[p]) map[p] = { total: 0, count: 0 };
+        map[p].total += total;
+        map[p].count += 1;
+      });
+    });
+    return map;
+  }
+
+  function renderVentas() {
+    const loading = document.getElementById('ventasLoading');
+    const content = document.getElementById('ventasContent');
+    if (!ventasData.length) {
+      loading.innerHTML = '<span style="color:var(--muted)">No se encontraron datos de ventas.</span>';
+      return;
+    }
+    loading.style.display = 'none';
+    content.style.display = 'block';
+
+    const cols = getVentasCols();
+    const filtered = applyVentasFiltros(ventasData, cols);
+    const { byProd, sumaTotal, sumaUnits, nOps } = computeVentasProductStats(filtered, cols);
+    const byMonth = computeVentasMonthStats(filtered, cols);
+    const byDay   = computeVentasDayStats(filtered, cols);
+    const meses = computeDateRangeMonths(filtered, cols);
+    const mayoristaData = computeMayoristaClientes(filtered, cols);
+    const byColor  = computeByField(filtered, cols.colorCol,  cols.cantCol, cols.totalCol);
+    const byTalle  = computeByField(filtered, cols.talleCol,  cols.cantCol, cols.totalCol);
+    const byLista  = computeByField(filtered, cols.listaCol,  cols.cantCol, cols.totalCol);
+    const byOrigen = computeByField(filtered, cols.origenCol, cols.cantCol, cols.totalCol);
+    const byVendedor = computeByField(filtered, cols.vendedorCol, cols.cantCol, cols.totalCol);
+    const byProv   = computeByProveedor(filtered, cols);
+
+    const allVendedores = cols.vendedorCol >= 0
+      ? [...new Set(ventasData.map(r => String(r[cols.vendedorCol] ?? '').trim()).filter(Boolean))].sort()
+      : [];
+    const allProductos = cols.codigoCol >= 0
+      ? [...new Set(ventasData.map(r => {
+          const rawCod = String(r[cols.codigoCol] ?? '').trim();
+          const { codigo } = parseSKU(rawCod);
+          return (CODIGO_ALIAS[(codigo||rawCod).toUpperCase()] || (codigo||rawCod)).toUpperCase();
+        }).filter(Boolean))].sort()
+      : [];
+
+    const hasFilters = vFechaDesde || vFechaHasta || vVendedores.size > 0 || vArticulosFilter.size > 0 || vColoresFilter.size > 0 || vTallesFilter.size > 0 || vListaFilter.size > 0 || vOrigenFilter.size > 0 || vProveedoresFilter.size > 0;
+
+    let nFacturas = filtered.length;
+    if (cols.comprobanteCol >= 0) {
+      const compSet = new Set(filtered.map(r => String(r[cols.comprobanteCol] ?? '').trim()).filter(Boolean));
+      if (compSet.size > 0) nFacturas = compSet.size;
+    }
+    const ticketProm = nFacturas > 0 && sumaTotal > 0 ? sumaTotal / nFacturas : 0;
+    const ticketByLista = {};
+    if (cols.listaCol >= 0) {
+      const listaTotals = {}, listaComps = {};
+      filtered.forEach(row => {
+        const lista = String(row[cols.listaCol] ?? '').trim();
+        if (!lista) return;
+        if (!listaTotals[lista]) { listaTotals[lista] = 0; listaComps[lista] = new Set(); }
+        listaTotals[lista] += cols.totalCol >= 0 ? (parseFloat(row[cols.totalCol] ?? 0) || 0) : 0;
+        if (cols.comprobanteCol >= 0) {
+          const comp = String(row[cols.comprobanteCol] ?? '').trim();
+          if (comp) listaComps[lista].add(comp);
+        }
+      });
+      Object.keys(listaTotals).sort().forEach(lista => {
+        const nF = listaComps[lista].size > 0 ? listaComps[lista].size :
+                   filtered.filter(r => String(r[cols.listaCol] ?? '').trim() === lista).length;
+        ticketByLista[lista] = nF > 0 ? listaTotals[lista] / nF : 0;
+      });
+    }
+    const unidXMes   = meses > 0 ? Math.round(sumaUnits / meses) : 0;
+    const activeDays = Object.values(byDay).filter(d => d.total > 0).length || 1;
+    const avgVentaDiaria = sumaTotal / activeDays;
+
+    const availableMonths = cols.fechaCol >= 0
+      ? [...new Set(ventasData.map(r => {
+          const d = parseVentasFecha(r[cols.fechaCol]);
+          if (!d) return null;
+          return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        }).filter(Boolean))].sort().reverse()
+      : [];
+
+    let chipsHTML = '';
+    if (vFechaDesde || vFechaHasta) {
+      const label = [vFechaDesde && `desde ${vFechaDesde}`, vFechaHasta && `hasta ${vFechaHasta}`].filter(Boolean).join(' ');
+      chipsHTML += `<span class="sf-chip">${label}<button class="sf-chip-remove" onclick="vFechaDesde='';vFechaHasta='';renderVentas()">✕</button></span>`;
+    }
+    [...vVendedores].forEach(v  => { const e=v.replace(/'/g,"\\'"); chipsHTML+=`<span class="sf-chip">👤 ${v}<button class="sf-chip-remove" onclick="vVendedores.delete('${e}');renderVentas()">✕</button></span>`; });
+    [...vArticulosFilter].forEach(a => { const e=a.replace(/'/g,"\\'"); chipsHTML+=`<span class="sf-chip">📦 ${a}<button class="sf-chip-remove" onclick="vArticulosFilter.delete('${e}');renderVentas()">✕</button></span>`; });
+    [...vColoresFilter].forEach(c  => { const e=c.replace(/'/g,"\\'"); chipsHTML+=`<span class="sf-chip">🎨 ${c}<button class="sf-chip-remove" onclick="vColoresFilter.delete('${e}');renderVentas()">✕</button></span>`; });
+    [...vTallesFilter].forEach(t   => { const e=t.replace(/'/g,"\\'"); chipsHTML+=`<span class="sf-chip">📐 ${t}<button class="sf-chip-remove" onclick="vTallesFilter.delete('${e}');renderVentas()">✕</button></span>`; });
+    [...vListaFilter].forEach(l    => { const e=l.replace(/'/g,"\\'"); chipsHTML+=`<span class="sf-chip">💰 ${l}<button class="sf-chip-remove" onclick="vListaFilter.delete('${e}');renderVentas()">✕</button></span>`; });
+    [...vOrigenFilter].forEach(o   => { const e=o.replace(/'/g,"\\'"); chipsHTML+=`<span class="sf-chip">🏪 ${o}<button class="sf-chip-remove" onclick="vOrigenFilter.delete('${e}');renderVentas()">✕</button></span>`; });
+    [...vProveedoresFilter].forEach(p => { const e=p.replace(/'/g,"\\'"); chipsHTML+=`<span class="sf-chip">🏭 ${p}<button class="sf-chip-remove" onclick="vProveedoresFilter.delete('${e}');renderVentas()">✕</button></span>`; });
+
+    const allProveedoresVentas = cols.proveedorCol >= 0
+      ? [...new Set(ventasData.map(r => String(r[cols.proveedorCol] ?? '').trim()).filter(Boolean))].sort()
+      : [];
+
+    const vendedorItems = allVendedores.map(v => {
+      const sel = vVendedores.has(v);
+      const e = v.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<div class="sf-dd-item${sel?' sf-dd-selected':''}" onmousedown="vVendedores.has('${e}')?vVendedores.delete('${e}'):vVendedores.add('${e}');renderVentas()">
+        <span class="sf-dd-check">${sel?'✓':''}</span><span style="font-size:.82rem">${v}</span></div>`;
+    }).join('');
+
+    const artQuery = norm(vArticuloSearch);
+    const prodMatches = allProductos.filter(p => {
+      const cat = getCatalog(p);
+      return !artQuery || norm(p).includes(artQuery) || (cat && norm(cat.desc).includes(artQuery));
+    }).slice(0, 20);
+    const articuloItems = prodMatches.map(p => {
+      const sel = vArticulosFilter.has(p);
+      const cat = getCatalog(p);
+      const desc = cat ? cat.desc : (ALIAS_DESC[p] || '');
+      const e = p.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<div class="sf-dd-item${sel?' sf-dd-selected':''}" onmousedown="vArticulosFilter.has('${e}')?vArticulosFilter.delete('${e}'):vArticulosFilter.add('${e}');vArticuloSearch='';document.getElementById('vArtDropdown').style.display='none';renderVentas()">
+        <span class="sf-dd-check">${sel?'✓':''}</span>
+        <span style="font-family:var(--mono);font-weight:700;color:var(--accent2);font-size:.82rem">${p}</span>
+        ${desc?`<span style="color:var(--muted);font-size:.75rem;margin-left:.3rem">${desc}</span>`:''}
+      </div>`;
+    }).join('');
+
+    const dayKeys = Object.keys(byDay).sort();
+    let fechaLabels, fechaVals, fechaBadge;
+    if (dayKeys.length > 0 && dayKeys.length <= 120) {
+      fechaLabels = dayKeys.map(k => { const [y,mo,d]=k.split('-'); return `${d}/${mo}`; });
+      fechaVals   = dayKeys.map(k => Math.round(byDay[k].total));
+      fechaBadge  = `${dayKeys.length} días`;
+    } else {
+      const monthKeys = Object.keys(byMonth).sort().slice(-18);
+      fechaLabels = monthKeys.map(k => { const [y,mo]=k.split('-'); return MESES_ES[parseInt(mo)-1]+(monthKeys.length>12?` ${y.slice(2)}`:''); });
+      fechaVals   = monthKeys.map(k => Math.round(byMonth[k].total));
+      fechaBadge  = `${monthKeys.length} meses`;
+    }
+    const fechaMA = fechaVals.map((v,i) => {
+      const sl = fechaVals.slice(Math.max(0,i-2), i+1);
+      return Math.round(sl.reduce((s,x)=>s+x,0)/sl.length);
+    });
+
+    const topArts = Object.values(byProd).sort((a,b)=>b.total-a.total).slice(0,40);
+    const artLabels = topArts.map(p => p.key);
+    const artVals   = topArts.map(p => Math.round(p.total));
+    const artPcts   = topArts.map(p => (p.total / (sumaTotal || 1) * 100).toFixed(1));
+    const topProvs    = Object.entries(byProv).filter(([,v]) => v.total > 0).sort((a,b)=>b[1].total-a[1].total).slice(0,40);
+    const provLabels  = topProvs.map(([k]) => k.length > 22 ? k.slice(0,20)+'…' : k);
+    const provVals    = topProvs.map(([,v]) => Math.round(v.total));
+    const provPcts    = topProvs.map(([,v]) => (v.total / (sumaTotal || 1) * 100).toFixed(1));
+
+    const TALLEORD = ['MCH','XS','CH','S','M','4','G','L','5','MG','XL','6','MMG','XXL'];
+    const talleEntries = Object.entries(byTalle).sort((a,b) => {
+      const ia = TALLEORD.indexOf(a[0].toUpperCase()), ib = TALLEORD.indexOf(b[0].toUpperCase());
+      if (ia>=0&&ib>=0) return ia-ib;
+      const na=parseFloat(a[0]),nb=parseFloat(b[0]);
+      if (!isNaN(na)&&!isNaN(nb)) return na-nb;
+      return a[0].localeCompare(b[0]);
+    });
+    const talleLabels = talleEntries.map(([k])=>k);
+    const talleUnits  = talleEntries.map(([,v])=>Math.round(v.units));
+    const colorEntries = Object.entries(byColor).sort((a,b)=>b[1].units-a[1].units).slice(0,14);
+    const colorLabels  = colorEntries.map(([k])=>k);
+    const colorUnits   = colorEntries.map(([,v])=>Math.round(v.units));
+    const listaEntries = Object.entries(byLista).sort((a,b)=>b[1].total-a[1].total);
+    const listaLabels  = listaEntries.map(([k])=>k);
+    const listaVals    = listaEntries.map(([,v])=>Math.round(v.total));
+    const origenEntries = Object.entries(byOrigen).sort((a,b)=>b[1].total-a[1].total);
+    const origenLabels  = origenEntries.map(([k])=>k);
+    const origenVals    = origenEntries.map(([,v])=>Math.round(v.total));
+    const vendedorEntries = Object.entries(byVendedor).sort((a,b)=>b[1].total-a[1].total);
+    const vendedorLabels  = vendedorEntries.map(([k])=>k);
+    const vendedorVals    = vendedorEntries.map(([,v])=>Math.round(v.total));
+
+    const DONUT_COLORS = ['#1e3a8a','#7c3aed','#0369a1','#059669','#d97706','#dc2626','#db2777','#0891b2','#65a30d','#ea580c','#6d28d9','#0f766e','#92400e','#1f2937'];
+
+    let artDetailHTML = '';
+    if (vArticulosFilter.size > 0) {
+      const artList = [...vArticulosFilter];
+      const artDesc = artList.map(a => { const c=getCatalog(a); return c?`${a} — ${c.desc.slice(0,40)}`:a; }).join(' + ');
+      const provStr = artList.length===1 ? (()=>{ const c=getCatalog(artList[0]); return c&&c.proveedores.length?c.proveedores.join(', '):''; })() : '';
+      artDetailHTML = `<div class="panel" style="margin-bottom:1rem;border-left:3px solid var(--accent2)">
+        <div class="panel-header">
+          <div><div class="panel-title">📦 ${artDesc}</div>${provStr?`<div style="font-size:.72rem;color:var(--muted);margin-top:3px;font-family:var(--mono)">${provStr}</div>`:''}</div>
+          <div style="display:flex;gap:.5rem;align-items:center">
+            <span class="badge success">${fmtPesos(sumaTotal)}</span>
+            <span class="badge">${Math.round(sumaUnits).toLocaleString('es-AR')} u</span>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    const mayoristaFacturas = mayoristaData.facturas;
+    const mayoristaTotal = mayoristaData.groups.reduce((s,g) => s + g.total, 0);
+    const mayoristaUnidades = mayoristaData.groups.reduce((s,g) => s + g.unidades, 0);
+    const mayoristaPorVendedor = {};
+    mayoristaFacturas.forEach(f => {
+      const v = f.vendedor || '(sin vendedor)';
+      mayoristaPorVendedor[v] = (mayoristaPorVendedor[v] || 0) + 1;
+    });
+    const mayoristaVendedorEntries = Object.entries(mayoristaPorVendedor).sort((a,b) => b[1]-a[1]);
+
+    const mayoristaFacturaRow = f => {
+      const expanded = vMayoristaExpandido.has(f.comprobante);
+      const esc = f.comprobante.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      const itemsHTML = f.items.map(it => `
+        <tr>
+          <td style="font-family:var(--mono);font-weight:700;color:var(--accent2);font-size:.8rem">${it.codigo}</td>
+          <td style="font-size:.8rem;color:var(--muted)">${it.desc}</td>
+          <td style="font-family:var(--mono);font-size:.78rem;text-align:center">${it.color}</td>
+          <td style="font-family:var(--mono);font-size:.78rem;text-align:center">${it.talle}</td>
+          <td style="font-family:var(--mono);font-weight:700;text-align:right">${Math.round(it.cantidad).toLocaleString('es-AR')}</td>
+          <td style="font-family:var(--mono);font-size:.8rem;text-align:right">${fmtPesos(it.monto)}</td>
+        </tr>`).join('');
+      return `
+      <div style="border-bottom:1px solid var(--surface2)">
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.55rem 1.25rem .55rem 2.5rem;cursor:pointer" onclick="vMayoristaExpandido.has('${esc}')?vMayoristaExpandido.delete('${esc}'):vMayoristaExpandido.add('${esc}');renderVentas()">
+          <span style="font-family:var(--mono);font-size:.7rem;color:var(--muted);width:.9rem;flex-shrink:0">${expanded?'▾':'▸'}</span>
+          <span style="font-family:var(--mono);font-weight:700;font-size:.85rem">${f.comprobante}</span>
+          <span style="font-size:.78rem;color:var(--muted)">${f.vendedor || '—'}</span>
+          <span style="font-family:var(--mono);font-size:.72rem;color:var(--muted)">${f.fecha || '—'}</span>
+          <span style="margin-left:auto;font-family:var(--mono);font-size:.7rem;color:var(--muted);white-space:nowrap">${f.items.length} ítem${f.items.length!==1?'s':''} · ${Math.round(f.unidades)} u</span>
+          <span class="badge success">${fmtPesos(f.total)}</span>
+        </div>
+        ${expanded ? `<div class="table-wrap" style="padding:0 1.25rem .75rem 3.9rem">
+          <table>
+            <thead><tr><th>Código</th><th>Descripción</th><th style="text-align:center">Color</th><th style="text-align:center">Talle</th><th style="text-align:right">Cant.</th><th style="text-align:right">Monto</th></tr></thead>
+            <tbody>${itemsHTML}</tbody>
+          </table>
+        </div>` : ''}
+      </div>`;
+    };
+
+    const mayoristaClienteRow = c => {
+      const expanded = vMayoristaClienteExpandido.has(c.groupKey);
+      const esc = c.groupKey.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `
+      <div style="border-bottom:1px solid var(--surface2)">
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.7rem 1.25rem;cursor:pointer" onclick="vMayoristaClienteExpandido.has('${esc}')?vMayoristaClienteExpandido.delete('${esc}'):vMayoristaClienteExpandido.add('${esc}');renderVentas()">
+          <span style="font-family:var(--mono);font-size:.72rem;color:var(--muted);width:1rem;flex-shrink:0">${expanded?'▾':'▸'}</span>
+          ${c.clienteCodigo ? `<span style="font-family:var(--mono);font-weight:700;color:var(--accent2);font-size:.78rem">${c.clienteCodigo}</span>` : ''}
+          <span style="font-weight:600;font-size:.88rem">${c.clienteNombre}</span>
+          <span style="margin-left:auto;font-family:var(--mono);font-size:.7rem;color:var(--muted);white-space:nowrap">${c.facturas.length} factura${c.facturas.length!==1?'s':''} · ${Math.round(c.unidades)} u</span>
+          <span class="badge success">${fmtPesos(c.total)}</span>
+        </div>
+        ${expanded ? c.facturas.map(mayoristaFacturaRow).join('') : ''}
+      </div>`;
+    };
+
+    const mayoristaGroupsHTML = mayoristaData.groups.map(g => `
+      <div style="border-bottom:1px solid var(--surface2)">
+        <div style="display:flex;align-items:center;gap:.6rem;padding:.6rem 1.25rem;background:var(--surface2)">
+          <span style="font-weight:700;font-size:.82rem">${g.grupo}</span>
+          <span style="font-family:var(--mono);font-size:.7rem;color:var(--muted)">${g.clientes.length} cliente${g.clientes.length!==1?'s':''} · ${g.facturaCount} factura${g.facturaCount!==1?'s':''} · ${Math.round(g.unidades)} u</span>
+          <span class="badge success" style="margin-left:auto">${fmtPesos(g.total)}</span>
+        </div>
+        ${g.clientes.map(mayoristaClienteRow).join('')}
+      </div>`).join('');
+
+    Object.values(_vCharts).forEach(c => { try { c && c.destroy(); } catch(e){} });
+    _vCharts = {};
+
+    content.innerHTML = `
+      <div class="panel" style="margin-bottom:1rem;position:relative;z-index:100;overflow:visible">
+        <div class="filter-bar" style="gap:.6rem;flex-wrap:wrap">
+          <span class="filter-label">Mes</span>
+          <select onchange="vMesRapido=this.value;applyMesRapido();renderVentas()" style="margin-bottom:0;font-family:var(--mono);font-size:.8rem;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .7rem;background:#fff;color:var(--text);outline:none;cursor:pointer;${vMesRapido?'border-color:var(--accent2);background:#eff6ff;':''}">
+            <option value="">Todos los meses</option>
+            ${availableMonths.map(m => { const [y,mo]=m.split('-'); return `<option value="${m}"${vMesRapido===m?' selected':''}>${MESES_ES[parseInt(mo)-1]} ${y}</option>`; }).join('')}
+          </select>
+          <span class="filter-label" style="margin-left:.25rem">Período</span>
+          <input type="date" value="${vFechaDesde}" onchange="vFechaDesde=this.value;vMesRapido='';renderVentas()" style="margin-bottom:0;width:150px;font-size:.8rem;padding:.35rem .7rem">
+          <span style="color:var(--muted);font-size:.8rem">→</span>
+          <input type="date" value="${vFechaHasta}" onchange="vFechaHasta=this.value;vMesRapido='';renderVentas()" style="margin-bottom:0;width:150px;font-size:.8rem;padding:.35rem .7rem">
+          ${allVendedores.length ? `
+            <span class="filter-label" style="margin-left:.25rem">Vendedor</span>
+            <div style="position:relative">
+              <button class="btn-sm${vVendedores.size>0?' v-filter-active':''}"
+                onclick="const d=document.getElementById('vVendDropdown');d.style.display=d.style.display==='none'?'block':'none'"
+                onblur="setTimeout(()=>{const d=document.getElementById('vVendDropdown');if(d)d.style.display='none'},200)">
+                Vendedor${vVendedores.size>0?` (${vVendedores.size})`:' ▾'}</button>
+              <div id="vVendDropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:200px;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:260px;overflow-y:auto;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.18)">${vendedorItems}</div>
+            </div>` : ''}
+          ${allProductos.length ? `
+            <span class="filter-label" style="margin-left:.25rem">Artículo</span>
+            <div style="position:relative;z-index:50">
+              <input type="text" id="vArticuloInput" value="${vArticuloSearch.replace(/"/g,'&quot;')}" placeholder="Buscar…"
+                style="margin-bottom:0;width:160px;font-size:.8rem;padding:.35rem .7rem"
+                oninput="vArticuloSearch=this.value;renderVentasArtDropdown()"
+                onfocus="renderVentasArtDropdown()"
+                onblur="setTimeout(()=>{const d=document.getElementById('vArtDropdown');if(d)d.style.display='none'},200)">
+              <div id="vArtDropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:260px;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:260px;overflow-y:auto;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.18)">${articuloItems}</div>
+            </div>` : ''}
+          ${allProveedoresVentas.length ? `
+            <span class="filter-label" style="margin-left:.25rem">Proveedor</span>
+            <div style="position:relative;z-index:50">
+              <input type="text" id="vProveedorInput" value="${vProveedorSearch.replace(/"/g,'&quot;')}" placeholder="Buscar…"
+                style="margin-bottom:0;width:160px;font-size:.8rem;padding:.35rem .7rem"
+                oninput="vProveedorSearch=this.value;renderVentasProvDropdown()"
+                onfocus="renderVentasProvDropdown()"
+                onblur="setTimeout(()=>{const d=document.getElementById('vProvDropdown');if(d)d.style.display='none'},200)">
+              <div id="vProvDropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:240px;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:260px;overflow-y:auto;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.18)"></div>
+            </div>` : ''}
+          ${hasFilters ? `<button class="btn-clear" onclick="clearVentasFiltros()" style="margin-left:auto">✕ Limpiar filtros</button>` : ''}
+        </div>
+        ${chipsHTML ? `<div style="display:flex;flex-wrap:wrap;gap:.4rem;padding:.5rem 1.25rem .75rem">${chipsHTML}</div>` : ''}
+      </div>
+
+      ${artDetailHTML}
+
+      <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:1rem">
+        <div class="kpi" style="--kpi-color:var(--green)">
+          <div class="kpi-label">Facturación</div>
+          <div class="kpi-value" style="font-size:1.35rem">${fmtPesos(sumaTotal)}</div>
+          <div class="kpi-sub">${nOps.toLocaleString('es-AR')} filas · ${nFacturas.toLocaleString('es-AR')} facturas</div>
+        </div>
+        <div class="kpi" style="--kpi-color:var(--purple)">
+          <div class="kpi-label">Unidades</div>
+          <div class="kpi-value">${Math.round(sumaUnits).toLocaleString('es-AR')}</div>
+          <div class="kpi-sub">${unidXMes.toLocaleString('es-AR')} u/mes promedio</div>
+        </div>
+        <div class="kpi" style="--kpi-color:var(--accent2);cursor:pointer;user-select:none" onclick="const d=this.querySelector('.ticket-lista-detail');if(d)d.style.display=d.style.display==='none'?'block':'none'">
+          <div class="kpi-label">Ticket Promedio <span style="font-size:.6rem;color:var(--muted)">▾ por lista</span></div>
+          <div class="kpi-value" style="font-size:1.35rem">${fmtPesos(ticketProm)}</div>
+          <div class="kpi-sub">por factura · ${nFacturas} facturas</div>
+          <div class="ticket-lista-detail" style="display:none;margin-top:.5rem;border-top:1px solid var(--border);padding-top:.4rem">
+            ${Object.keys(ticketByLista).map(l => `<div class="kpi-sub" style="margin-top:3px;font-family:var(--mono);font-size:.7rem"><span style="color:var(--text);font-weight:500">${l}:</span> ${fmtPesos(ticketByLista[l])}</div>`).join('')}
+          </div>
+        </div>
+        <div class="kpi" style="--kpi-color:var(--accent)">
+          <div class="kpi-label">Venta Diaria Prom.</div>
+          <div class="kpi-value" style="font-size:1.35rem">${fmtPesos(avgVentaDiaria)}</div>
+          <div class="kpi-sub">${activeDays} días con ventas</div>
+        </div>
+      </div>
+
+      <div class="v-charts-row-2big">
+        <div class="panel">
+          <div class="panel-header" style="padding:.75rem 1rem">
+            <span class="panel-title" style="font-size:.82rem">FACTURACIÓN POR ARTÍCULO</span>
+            <span class="badge">${topArts.length} SKUs</span>
+            ${topArts.length > 12 ? '<span style="font-size:.65rem;color:var(--muted);font-family:var(--mono);margin-left:.4rem">scroll para ver más</span>' : ''}
+          </div>
+          <div class="v-chart-scroll" style="padding:.75rem 1rem 1rem;height:320px">
+            <div style="height:${Math.max(topArts.length * 28, 290)}px"><canvas id="chartArt"></canvas></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header" style="padding:.75rem 1rem">
+            <span class="panel-title" style="font-size:.82rem">FACTURACIÓN POR PROVEEDOR</span>
+            <span class="badge">${topProvs.length} proveedores</span>
+            ${topProvs.length > 12 ? '<span style="font-size:.65rem;color:var(--muted);font-family:var(--mono);margin-left:.4rem">scroll para ver más</span>' : ''}
+          </div>
+          <div class="v-chart-scroll" style="padding:.75rem 1rem 1rem;height:320px">
+            <div style="height:${Math.max(topProvs.length * 28, 290)}px"><canvas id="chartProv"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:1.25rem">
+        <div class="panel-header" style="padding:.75rem 1rem">
+          <span class="panel-title" style="font-size:.82rem">FACTURACIÓN POR FECHA</span>
+          <span class="badge">${fechaBadge}</span>
+        </div>
+        <div style="padding:.75rem 1rem 1rem;height:290px"><canvas id="chartFecha"></canvas></div>
+      </div>
+
+      <div class="v-charts-row-colortalle">
+        ${colorLabels.length ? `<div class="panel chart-clickable">
+          <div class="panel-header" style="padding:.75rem 1rem">
+            <span class="panel-title" style="font-size:.78rem">COLOR</span>
+            ${vColoresFilter.size>0?`<span class="badge warning">${vColoresFilter.size} activos</span>`:'<span style="font-size:.65rem;color:var(--muted);font-family:var(--mono)">click para filtrar</span>'}
+          </div>
+          <div style="padding:.5rem 1rem 1rem;height:210px"><canvas id="chartColor"></canvas></div>
+        </div>` : ''}
+        ${talleLabels.length ? `<div class="panel chart-clickable">
+          <div class="panel-header" style="padding:.75rem 1rem">
+            <span class="panel-title" style="font-size:.78rem">CURVA DE TALLE</span>
+            ${vTallesFilter.size>0?`<span class="badge warning">${vTallesFilter.size} activos</span>`:'<span style="font-size:.65rem;color:var(--muted);font-family:var(--mono)">click para filtrar</span>'}
+          </div>
+          <div style="padding:.5rem 1rem 1rem;height:210px"><canvas id="chartTalle"></canvas></div>
+        </div>` : ''}
+      </div>
+
+      <div class="v-charts-row-3equal">
+        ${listaLabels.length ? `<div class="panel chart-clickable">
+          <div class="panel-header" style="padding:.75rem 1rem">
+            <span class="panel-title" style="font-size:.78rem">LISTA DE PRECIOS</span>
+            ${vListaFilter.size>0?`<span class="badge warning">${vListaFilter.size} activos</span>`:'<span style="font-size:.65rem;color:var(--muted);font-family:var(--mono)">click para filtrar</span>'}
+          </div>
+          <div style="padding:.5rem 1rem 1rem;height:210px"><canvas id="chartLista"></canvas></div>
+        </div>` : ''}
+        ${origenLabels.length ? `<div class="panel chart-clickable">
+          <div class="panel-header" style="padding:.75rem 1rem">
+            <span class="panel-title" style="font-size:.78rem">ORIGEN VENTA</span>
+            ${vOrigenFilter.size>0?`<span class="badge warning">${vOrigenFilter.size} activos</span>`:'<span style="font-size:.65rem;color:var(--muted);font-family:var(--mono)">click para filtrar</span>'}
+          </div>
+          <div style="padding:.5rem 1rem 1rem;height:210px"><canvas id="chartOrigen"></canvas></div>
+        </div>` : ''}
+        ${vendedorLabels.length ? `<div class="panel chart-clickable">
+          <div class="panel-header" style="padding:.75rem 1rem">
+            <span class="panel-title" style="font-size:.78rem">VENDEDOR</span>
+            ${vVendedores.size>0?`<span class="badge warning">${vVendedores.size} activos</span>`:'<span style="font-size:.65rem;color:var(--muted);font-family:var(--mono)">click para filtrar</span>'}
+          </div>
+          <div style="padding:.5rem 1rem 1rem;height:210px"><canvas id="chartVendedor"></canvas></div>
+        </div>` : ''}
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Facturas Mayoristas</span>
+          <span class="badge">${mayoristaData.distinctClientCount} clientes</span>
+          <span class="badge">${mayoristaFacturas.length} facturas</span>
+          <span class="badge success">${fmtPesos(mayoristaTotal)}</span>
+          <span class="badge">${Math.round(mayoristaUnidades).toLocaleString('es-AR')} u</span>
+          ${mayoristaVendedorEntries.length ? `<span style="font-family:var(--mono);font-size:.7rem;color:var(--muted);margin-left:auto">${mayoristaVendedorEntries.map(([v,n]) => `${v}: ${n}`).join(' · ')}</span>` : ''}
+        </div>
+        ${mayoristaData.groups.length ? mayoristaGroupsHTML : '<div class="empty">No hay facturas de lista Mayorista o Lista 3 para los filtros aplicados.</div>'}
+      </div>`;
+
+    if (typeof Chart === 'undefined') return;
+
+    const fmtM = v => '$ ' + (v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'k':Math.round(v));
+    const monoFont = { family: 'DM Mono, monospace' };
+
+    const ctxArt = document.getElementById('chartArt');
+    if (ctxArt && topArts.length) {
+      _vCharts.art = new Chart(ctxArt, {
+        type: 'bar',
+        data: { labels: artLabels, datasets: [{ data: artVals, backgroundColor: 'rgba(30,58,138,.7)', borderColor: '#1e3a8a', borderWidth: 1, borderRadius: 2 }] },
+        options: {
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          layout: { padding: { right: 48 } },
+          onClick: (evt, els) => { if (!els.length) return; const l=artLabels[els[0].index]; if(vArticulosFilter.has(l))vArticulosFilter.delete(l);else vArticulosFilter.add(l); renderVentas(); },
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' '+fmtM(ctx.raw)+' ('+artPcts[ctx.dataIndex]+'%)' } } },
+          scales: {
+            x: { grid: { color: '#f0eeeb' }, ticks: { font: monoFont, callback: v=>fmtM(v), maxTicksLimit: 5 } },
+            y: { ticks: { font: { ...monoFont, size: 11 } } }
+          }
+        },
+        plugins: [{
+          afterDraw(chart) {
+            const c = chart.ctx;
+            chart.getDatasetMeta(0).data.forEach((bar, i) => {
+              c.save();
+              c.font = '700 10px DM Mono, monospace';
+              c.fillStyle = '#d97706';
+              c.textAlign = 'left';
+              c.textBaseline = 'middle';
+              c.fillText(artPcts[i] + '%', bar.x + 5, bar.y);
+              c.restore();
+            });
+          }
+        }]
+      });
+    }
+
+    const ctxProv = document.getElementById('chartProv');
+    if (ctxProv && topProvs.length) {
+      _vCharts.prov = new Chart(ctxProv, {
+        type: 'bar',
+        data: { labels: provLabels, datasets: [{ data: provVals, backgroundColor: 'rgba(30,58,138,.7)', borderColor: '#1e3a8a', borderWidth: 1, borderRadius: 2 }] },
+        options: {
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          layout: { padding: { right: 48 } },
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' '+fmtM(ctx.raw)+' ('+provPcts[ctx.dataIndex]+'%)' } } },
+          scales: {
+            x: { grid: { color: '#f0eeeb' }, ticks: { font: monoFont, callback: v=>fmtM(v), maxTicksLimit: 5 } },
+            y: { ticks: { font: { ...monoFont, size: 11 } } }
+          }
+        },
+        plugins: [{
+          afterDraw(chart) {
+            const c = chart.ctx;
+            chart.getDatasetMeta(0).data.forEach((bar, i) => {
+              c.save();
+              c.font = '700 10px DM Mono, monospace';
+              c.fillStyle = '#d97706';
+              c.textAlign = 'left';
+              c.textBaseline = 'middle';
+              c.fillText(provPcts[i] + '%', bar.x + 5, bar.y);
+              c.restore();
+            });
+          }
+        }]
+      });
+    }
+
+    const ctxFecha = document.getElementById('chartFecha');
+    if (ctxFecha && fechaLabels.length) {
+      _vCharts.fecha = new Chart(ctxFecha, {
+        type: 'line',
+        data: {
+          labels: fechaLabels,
+          datasets: [
+            { label: 'Facturación', data: fechaVals, borderColor: '#1e3a8a', backgroundColor: 'rgba(30,58,138,.1)', borderWidth: 1.5, fill: true, tension: 0.2, pointRadius: fechaLabels.length > 60 ? 0 : 2 },
+            { label: 'Media móvil', data: fechaMA, borderColor: '#d97706', borderWidth: 1.5, borderDash: [6,3], fill: false, tension: 0, pointRadius: 0 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` $ ${Math.round(ctx.raw).toLocaleString('es-AR')}` } } },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { ...monoFont, size: 9 }, maxTicksLimit: 20, maxRotation: 45 } },
+            y: { grid: { color: '#f0eeeb' }, ticks: { font: { ...monoFont, size: 9 }, callback: v=>fmtM(v) } }
+          }
+        }
+      });
+    }
+
+    const makeDonut = (canvasId, labels, data, onClickFn, isMoney=false, customColors=null) => {
+      const ctx = document.getElementById(canvasId);
+      if (!ctx || !labels.length) return null;
+      const total = data.reduce((s,v)=>s+v,0) || 1;
+      const bgColors = customColors || DONUT_COLORS.slice(0,labels.length);
+      return new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: bgColors, borderWidth: 1.5, borderColor: '#fff' }] },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '58%',
+          onClick: (evt, els) => { if (!els.length||!onClickFn) return; onClickFn(labels[els[0].index]); },
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: {
+                font: { ...monoFont, size: 9 }, boxWidth: 10, padding: 5,
+                generateLabels: chart => labels.map((lbl,i) => ({
+                  text: isMoney
+                    ? `${lbl} (${(data[i]/total*100).toFixed(1)}%)`
+                    : `${lbl} (${(data[i]/total*100).toFixed(2).replace('.',',')}%)`,
+                  fillStyle: bgColors[i]||'#ccc', strokeStyle: '#fff', lineWidth: 1, index: i,
+                  fontColor: '#374151'
+                }))
+              }
+            },
+            tooltip: { callbacks: { label: ctx => isMoney
+              ? ` ${ctx.label}: ${fmtM(ctx.raw)} (${(ctx.raw/total*100).toFixed(1)}%)`
+              : ` ${ctx.label}: ${ctx.raw.toLocaleString('es-AR')} u (${(ctx.raw/total*100).toFixed(1)}%)`
+            }}
+          }
+        }
+      });
+    };
+
+    const COLOR_HEX = {
+      'E1':'#4ade80', 'G1':'#d4b896', 'H1':'#f5f5f5', 'H2':'#1f2937',
+      'P4':'#9ca3af', 'G3':'#7c5c3e', 'C4':'#1e3a8a', 'C6':'#3b82f6',
+      'D1':'#f97316', 'B1':'#ef4444', 'H3':'#6b7280', 'H0':'#e8d5b0',
+      'I0':'#7dd3fc'
+    };
+    const colorBgs = colorLabels.map(lbl => COLOR_HEX[lbl.toUpperCase()] || DONUT_COLORS[colorLabels.indexOf(lbl) % DONUT_COLORS.length]);
+    _vCharts.color  = makeDonut('chartColor',  colorLabels,  colorUnits,  lbl => { if(vColoresFilter.has(lbl))vColoresFilter.delete(lbl);else vColoresFilter.add(lbl); renderVentas(); }, false, colorBgs);
+    _vCharts.lista  = makeDonut('chartLista',  listaLabels,  listaVals,   lbl => { if(vListaFilter.has(lbl))vListaFilter.delete(lbl);else vListaFilter.add(lbl); renderVentas(); }, true);
+    _vCharts.origen = makeDonut('chartOrigen', origenLabels, origenVals,  lbl => { if(vOrigenFilter.has(lbl))vOrigenFilter.delete(lbl);else vOrigenFilter.add(lbl); renderVentas(); }, true);
+    _vCharts.vendedor = makeDonut('chartVendedor', vendedorLabels, vendedorVals, lbl => { if(vVendedores.has(lbl))vVendedores.delete(lbl);else vVendedores.add(lbl); renderVentas(); }, true);
+
+    const ctxTalle = document.getElementById('chartTalle');
+    if (ctxTalle && talleLabels.length) {
+      const talleBgColors = talleLabels.map(t => vTallesFilter.has(t) ? 'rgba(30,58,138,.95)' : 'rgba(30,58,138,.55)');
+      _vCharts.talle = new Chart(ctxTalle, {
+        type: 'bar',
+        data: { labels: talleLabels, datasets: [{ data: talleUnits, backgroundColor: talleBgColors, borderColor: '#1e3a8a', borderWidth: 1, borderRadius: 2 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          onClick: (evt, els) => { if (!els.length) return; const l=talleLabels[els[0].index]; if(vTallesFilter.has(l))vTallesFilter.delete(l);else vTallesFilter.add(l); renderVentas(); },
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw.toLocaleString('es-AR')} u` } } },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { ...monoFont, size: 9 } } },
+            y: { grid: { color: '#f0eeeb' }, ticks: { font: { ...monoFont, size: 9 } } }
+          }
+        }
+      });
+    }
+  }
+
+  // SETUP / CONNECT
+  async function connect() {
+    VENTAS_SHEETS_ID = document.getElementById('ventasSheetsId').value.trim() || VENTAS_SHEETS_ID_DEFAULT;
+    VENTAS_PUB_ID = document.getElementById('ventasPubId').value.trim() || VENTAS_PUB_ID_DEFAULT;
+    VENTAS_GID = document.getElementById('ventasGidInput').value.trim() || VENTAS_GID_DEFAULT;
+    const err = document.getElementById('errorMsg');
+    err.style.display = 'none';
+    const btn = document.querySelector('#setup .btn');
+    btn.disabled = true; btn.textContent = 'Cargando…';
+    localStorage.setItem('ventas_sheets_id', VENTAS_SHEETS_ID);
+    localStorage.setItem('ventas_pub_id', VENTAS_PUB_ID);
+    localStorage.setItem('ventas_gid', VENTAS_GID);
+    document.getElementById('setup').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'flex';
+    loadData();
+  }
+
+  function resetConfig() {
+    ['ventas_sheets_id','ventas_pub_id','ventas_gid'].forEach(k => localStorage.removeItem(k));
+    location.reload();
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const sid = localStorage.getItem('ventas_sheets_id');
+    const pid = localStorage.getItem('ventas_pub_id');
+    const gid = localStorage.getItem('ventas_gid');
+    if (sid) {
+      VENTAS_SHEETS_ID = sid;
+      VENTAS_PUB_ID = pid || VENTAS_PUB_ID_DEFAULT;
+      VENTAS_GID = gid || VENTAS_GID_DEFAULT;
+      document.getElementById('setup').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'flex';
+      loadData();
+    }
+    setInterval(() => { if (VENTAS_SHEETS_ID) loadData(); }, 300000);
+  });
+</script>
+</body>
+</html>
